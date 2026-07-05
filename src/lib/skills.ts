@@ -1,0 +1,21 @@
+export const MASTER_SKILLS = [
+  "Monitoring & Evaluation",
+  "Project Management",
+  "Fundraising",
+  "Proposal Writing",
+  "Research",
+  "Advocacy",
+  "Community Mobilization",
+  "Child Protection",
+  "Livelihoods",
+  "Gender",
+  "Climate Change",
+  "Data Analysis",
+  "Excel",
+  "SPSS",
+  "Power BI",
+  "Python",
+  "GIS",
+  "Report Writing",
+  "Training & Facilitation"
+];

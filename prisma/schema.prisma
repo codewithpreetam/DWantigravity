@@ -1,0 +1,621 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  SEEKER
+  EMPLOYER
+  ADMIN
+}
+
+enum OrgStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApplicationStage {
+  APPLIED
+  SCREENING
+  SHORTLISTED
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+  NEW
+  UNDER_REVIEW
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  ASSESSMENT
+  OFFER_SENT
+  WITHDRAWN
+}
+
+enum EventFormat {
+  IN_PERSON
+  WEBINAR
+  HYBRID
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole        @default(SEEKER)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+
+  // Employer & Recruiter Relations
+  organizationId String?
+  organization   Organization?  @relation("OrgMembers", fields: [organizationId], references: [id])
+  ownedOrg       Organization?  @relation("OrgOwner")
+
+  profilePhoto         String?
+  jobTitle             String?
+  department           String?
+  shortBio             String?
+  aboutMe              String?   @db.Text
+  phone                String?
+  linkedin             String?
+  website              String?
+  twitter              String?
+  officeLocation       String?
+  team                 String?
+  twoFactorEnabled     Boolean   @default(false)
+  notificationPrefs    String?   // JSON string
+  loginSessions        String?   // JSON string
+  roleInOrg            String?   @default("Recruiter") // Owner, Admin, Recruiter, Viewer
+
+  // Posted Opportunities relations
+  postedJobs          Job[]          @relation("PostedJobs")
+  postedInternships   Internship[]   @relation("PostedInternships")
+  postedFellowships   Fellowship[]   @relation("PostedFellowships")
+  postedScholarships  Scholarship[]  @relation("PostedScholarships")
+  postedGrants        Grant[]        @relation("PostedGrants")
+  postedConsultancies Consultancy[]  @relation("PostedConsultancies")
+  postedVolunteers    Volunteer[]    @relation("PostedVolunteers")
+  postedEvents        Event[]        @relation("PostedEvents")
+  assignedApplications Application[] @relation("AssignedApplications")
+
+  // Candidate Seeker Relations
+  resumeUrl      String?
+  skills         String[]
+  experience     String?
+  experienceYears Int?       @default(0)
+  educationDegree String?
+  languages      String[]
+  location       String?
+  bio            String?
+  applications   Application[]
+  savedJobs      SavedJob[]
+  savedSearches  SavedSearch[]
+  registrations  Registration[]
+  notifications  Notification[]
+  sentMessages     Message[]    @relation("SentMessages")
+  receivedMessages Message[]    @relation("ReceivedMessages")
+  payments       Payment[]
+  blogs          Blog[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Organization {
+  id          String    @id @default(cuid())
+  name        String
+  logo        String?
+  coverBanner          String?
+  mission              String?
+  vision               String?
+  areasOfWork          String[]  @default([])
+  sdgs                 String[]  @default([])
+  causeAreas           String[]  @default([])
+  orgType              String?
+  registrationNumber   String?
+  yearFounded          Int?
+  headquarters         String?
+  additionalLocations  String[]  @default([])
+  website     String?
+  description String?
+  orgSize              String?
+  employeesCount       Int?
+  volunteersCount      Int?
+  annualBudget         String?
+  hiringStatus         Boolean   @default(true)
+  careersPage          String?
+  linkedin             String?
+  facebook             String?
+  instagram            String?
+  twitter              String?
+  youtube              String?
+  email                String?
+  phone                String?
+  status      OrgStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  ownerId     String    @unique
+  owner       User      @relation("OrgOwner", fields: [ownerId], references: [id])
+  members     User[]    @relation("OrgMembers")
+
+  jobs          Job[]
+  internships   Internship[]
+  fellowships   Fellowship[]
+  scholarships  Scholarship[]
+  grants        Grant[]
+  consultancies Consultancy[]
+  volunteers    Volunteer[]
+  payments      Payment[]
+  subscriptions Subscription[]
+  events        Event[]
+}
+
+model Category {
+  id             String        @id @default(cuid())
+  name           String        @unique
+  jobs           Job[]
+  internships    Internship[]
+  fellowships    Fellowship[]
+  scholarships   Scholarship[]
+  grants         Grant[]
+  consultancies  Consultancy[]
+  volunteers     Volunteer[]
+  blogs          Blog[]
+}
+
+model Skill {
+  id    String @id @default(cuid())
+  name  String @unique
+}
+
+model Location {
+  id    String @id @default(cuid())
+  name  String @unique
+}
+
+// OPPORTUNITIES
+
+model Job {
+  id             String       @id @default(cuid())
+  title          String
+  description    String
+  requirements   String?
+  location       String
+  salaryMin      Int?
+  salaryMax      Int?
+  employmentType String?      // e.g. FULL_TIME, PART_TIME, CONTRACTOR, INTERN, VOLUNTEER
+  isRemote       Boolean      @default(false)
+  workMode       String?      // e.g. ON_SITE, HYBRID, REMOTE
+  isActive       Boolean      @default(true)
+  requiredSkills String[]
+  preferredSkills String[]
+  minExperienceYears Int?     @default(0)
+  minEducation   String?
+  requiredLanguages String[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id])
+
+  postedById     String?
+  postedBy       User?        @relation("PostedJobs", fields: [postedById], references: [id])
+
+  applications   Application[]
+  savedJobs      SavedJob[]
+}
+
+model Internship {
+  id             String       @id @default(cuid())
+  title          String
+  description    String
+  requirements   String?
+  location       String
+  stipend        Int?
+  durationMonths Int?
+  isActive       Boolean      @default(true)
+  requiredSkills String[]
+  preferredSkills String[]
+  minExperienceYears Int?     @default(0)
+  minEducation   String?
+  requiredLanguages String[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id])
+
+  postedById     String?
+  postedBy       User?        @relation("PostedInternships", fields: [postedById], references: [id])
+
+  applications   Application[]
+  savedJobs      SavedJob[]
+}
+
+model Fellowship {
+  id             String       @id @default(cuid())
+  title          String
+  description    String
+  requirements   String?
+  location       String
+  stipend        Int?
+  durationMonths Int?
+  isActive       Boolean      @default(true)
+  requiredSkills String[]
+  preferredSkills String[]
+  minExperienceYears Int?     @default(0)
+  minEducation   String?
+  requiredLanguages String[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id])
+
+  postedById     String?
+  postedBy       User?        @relation("PostedFellowships", fields: [postedById], references: [id])
+
+  applications   Application[]
+  savedJobs      SavedJob[]
+}
+
+model Scholarship {
+  id             String       @id @default(cuid())
+  title          String
+  description    String
+  requirements   String?
+  amount         Int?
+  isActive       Boolean      @default(true)
+  requiredSkills String[]
+  preferredSkills String[]
+  minExperienceYears Int?     @default(0)
+  minEducation   String?
+  requiredLanguages String[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id])
+
+  postedById     String?
+  postedBy       User?        @relation("PostedScholarships", fields: [postedById], references: [id])
+
+  applications   Application[]
+  savedJobs      SavedJob[]
+}
+
+model Grant {
+  id             String       @id @default(cuid())
+  title          String
+  description    String
+  requirements   String?
+  amount         Int?
+  deadline       DateTime?
+  externalApplyLink String?
+  isActive       Boolean      @default(true)
+  requiredSkills String[]
+  preferredSkills String[]
+  minExperienceYears Int?     @default(0)
+  minEducation   String?
+  requiredLanguages String[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id])
+
+  postedById     String?
+  postedBy       User?        @relation("PostedGrants", fields: [postedById], references: [id])
+
+  applications   Application[]
+  savedJobs      SavedJob[]
+}
+
+model Consultancy {
+  id             String       @id @default(cuid())
+  title          String
+  description    String
+  requirements   String?
+  location       String
+  budget         Int?
+  isActive       Boolean      @default(true)
+  requiredSkills String[]
+  preferredSkills String[]
+  minExperienceYears Int?     @default(0)
+  minEducation   String?
+  requiredLanguages String[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id])
+
+  postedById     String?
+  postedBy       User?        @relation("PostedConsultancies", fields: [postedById], references: [id])
+
+  applications   Application[]
+  savedJobs      SavedJob[]
+}
+
+model Volunteer {
+  id             String       @id @default(cuid())
+  title          String
+  description    String
+  requirements   String?
+  location       String
+  isActive       Boolean      @default(true)
+  requiredSkills String[]
+  preferredSkills String[]
+  minExperienceYears Int?     @default(0)
+  minEducation   String?
+  requiredLanguages String[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  categoryId     String?
+  category       Category?    @relation(fields: [categoryId], references: [id])
+
+  postedById     String?
+  postedBy       User?        @relation("PostedVolunteers", fields: [postedById], references: [id])
+
+  applications   Application[]
+  savedJobs      SavedJob[]
+}
+
+// APPLICATIONS
+
+model Application {
+  id             String           @id @default(cuid())
+  stage          ApplicationStage @default(APPLIED)
+  resumeUrl      String?
+  coverLetter    String?          @db.Text
+  feedback       String?          @db.Text
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  candidateId    String
+  candidate      User             @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  // ATS Evaluation fields
+  notes          String?          @db.Text
+  rating         Int?
+  tags           String[]         @default([])
+  assignedToId   String?
+  assignedTo     User?            @relation("AssignedApplications", fields: [assignedToId], references: [id])
+
+  // Interview Schedule
+  interviewDate        DateTime?
+  interviewTime        String?
+  interviewTimezone    String?
+  interviewType        String? // Google Meet, Zoom, MS Teams, Offline
+  interviewLink        String?
+  interviewInterviewer String?
+  interviewStatus      String? // SCHEDULED, COMPLETED, RESCHEDULED, CANCELLED
+
+  // Polymorphic-like references to opportunities
+  jobId          String?
+  job            Job?             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  internshipId   String?
+  internship     Internship?      @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  fellowshipId   String?
+  fellowship     Fellowship?      @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  scholarshipId  String?
+  scholarship    Scholarship?     @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+
+  grantId        String?
+  grant          Grant?           @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  consultancyId  String?
+  consultancy    Consultancy?     @relation(fields: [consultancyId], references: [id], onDelete: Cascade)
+
+  volunteerId    String?
+  volunteer      Volunteer?       @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  eventId        String?
+  event          Event?           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+// SAVED OPPORTUNITIES & SEARCHES
+
+model SavedJob {
+  id             String       @id @default(cuid())
+  createdAt      DateTime     @default(now())
+  candidateId    String
+  candidate      User         @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  jobId          String?
+  job            Job?         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  internshipId   String?
+  internship     Internship?  @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  fellowshipId   String?
+  fellowship     Fellowship?  @relation(fields: [fellowshipId], references: [id], onDelete: Cascade)
+
+  scholarshipId  String?
+  scholarship    Scholarship? @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+
+  grantId        String?
+  grant          Grant?       @relation(fields: [grantId], references: [id], onDelete: Cascade)
+
+  consultancyId  String?
+  consultancy    Consultancy? @relation(fields: [consultancyId], references: [id], onDelete: Cascade)
+
+  volunteerId    String?
+  volunteer      Volunteer?   @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+}
+
+model SavedSearch {
+  id          String   @id @default(cuid())
+  query       String
+  filters     String?  // JSON string
+  createdAt   DateTime @default(now())
+
+  candidateId String
+  candidate   User     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+// EVENTS & TICKETING
+
+model Event {
+  id            String       @id @default(cuid())
+  title         String
+  description   String
+  date          DateTime
+  location      String
+  format        EventFormat  @default(IN_PERSON)
+  requiredSkills String[]
+  preferredSkills String[]
+  minExperienceYears Int?     @default(0)
+  minEducation   String?
+  requiredLanguages String[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  organizerId   String
+  organizer     Organization @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+
+  postedById     String?
+  postedBy       User?        @relation("PostedEvents", fields: [postedById], references: [id])
+
+  registrations Registration[]
+  applications  Application[]
+}
+
+model Registration {
+  id             String   @id @default(cuid())
+  qrCode         String?  // mock token/string
+  certificateUrl String?
+  attended       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  eventId        String
+  event          Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+}
+
+// OTHER MODULES
+
+model Blog {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    @db.Text
+  published   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id             String   @id @default(cuid())
+  amount         Int
+  currency       String   @default("INR")
+  status         String   // e.g. SUCCESS, PENDING, FAILED
+  referenceId    String?  // Gateway ID e.g. Razorpay payment ID
+  createdAt      DateTime @default(now())
+
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id             String   @id @default(cuid())
+  plan           String   // e.g. FREE, GROWTH, PREMIUM
+  active         Boolean  @default(true)
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
