@@ -50,22 +50,29 @@ export default function UserMenu({ user, organizationName }: UserMenuProps) {
       {/* Dropdown Trigger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 p-1 px-2.5 rounded-xl border border-card-border glass-panel hover:bg-white/10 transition-all text-xs font-semibold text-foreground cursor-pointer"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        aria-label="User menu"
+        className="flex items-center gap-2 p-1 px-2.5 rounded-xl border border-card-border glass-panel hover:bg-white/10 transition-all text-xs font-semibold text-foreground cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         {user.image ? (
-          <img src={user.image} alt={user.name || "Avatar"} className="w-6 h-6 rounded-full object-cover border border-card-border" />
+          <img src={user.image} alt="" className="w-6 h-6 rounded-full object-cover border border-card-border" aria-hidden="true" />
         ) : (
-          <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-extrabold uppercase text-[10px]">
+          <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-extrabold uppercase text-[10px]" aria-hidden="true">
             {user.name?.substring(0, 1) || "U"}
           </div>
         )}
         <span className="hidden sm:inline">{user.name || "My Account"}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>
 
       {/* Popover Dropdown Panel */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 rounded-xl border border-card-border bg-white/95 dark:bg-black/95 backdrop-blur-md shadow-xl py-2 z-50 animate-fadeIn space-y-1">
+        <div 
+          className="absolute right-0 mt-2 w-56 rounded-xl border border-card-border bg-white/95 dark:bg-black/95 backdrop-blur-md shadow-xl py-2 z-50 animate-fadeIn space-y-1"
+          role="menu"
+          aria-orientation="vertical"
+        >
           {/* Recruiter / Account Header Info */}
           <div className="px-4 py-2 border-b border-card-border">
             <p className="text-xs font-extrabold text-foreground leading-tight truncate">{user.name}</p>

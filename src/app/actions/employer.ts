@@ -289,22 +289,72 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const capacity = parseInt(formData.get("capacity") as string) || 100;
   const price = parseInt(formData.get("price") as string) || 0;
   const organizerId = formData.get("organizationId") as string;
+  const coverImage = formData.get("coverImage") as string | null;
+  const registrationDeadlineStr = formData.get("registrationDeadline") as string | null;
+  const format = formData.get("format") as any || "IN_PERSON";
+  const website = formData.get("website") as string | null;
+  const categoryId = formData.get("categoryId") as string | null;
+  const eligibility = formData.get("eligibility") as string | null;
+  const contactEmail = formData.get("contactEmail") as string | null;
+  const contactPhone = formData.get("contactPhone") as string | null;
+  const agenda = formData.get("agenda") as string | null;
+  const timeZone = formData.get("timeZone") as string | null;
+  const duration = formData.get("duration") as string | null;
+  const venue = formData.get("venue") as string | null;
+  const city = formData.get("city") as string | null;
+  const state = formData.get("state") as string | null;
+  const country = formData.get("country") as string | null;
+  const meetingPlatform = formData.get("meetingPlatform") as string | null;
+  
+  const certificateAvailable = formData.get("certificateAvailable") === "true";
+  const recordingAvailable = formData.get("recordingAvailable") === "true";
+
+  const tagsRaw = formData.get("tags") as string;
+  const tags = tagsRaw ? tagsRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
+  
+  const audienceRaw = formData.get("audience") as string;
+  const audience = audienceRaw ? audienceRaw.split(",").map(s => s.trim()).filter(Boolean) : [];
 
   if (!title || !description || !dateStr || !organizerId) {
     return;
   }
 
+  // Generate a unique slug: slugify title + random string
+  const baseSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 8)}`;
+
   try {
     const matching = parseMatchingParams(formData);
     await db.event.create({
       data: {
+        slug,
         title,
         description,
+        coverImage,
         date: new Date(dateStr),
+        registrationDeadline: registrationDeadlineStr ? new Date(registrationDeadlineStr) : null,
         time,
         location,
         capacity,
         price,
+        format,
+        website,
+        categoryId,
+        tags,
+        audience,
+        eligibility,
+        contactEmail,
+        contactPhone,
+        agenda,
+        timeZone,
+        duration,
+        venue,
+        city,
+        state,
+        country,
+        meetingPlatform,
+        certificateAvailable,
+        recordingAvailable,
         postedById: await getRecruiterId(),
         organizerId,
         ...matching

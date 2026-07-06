@@ -44,8 +44,8 @@ function SignUpForm() {
 
       <div className="max-w-md w-full space-y-8 glass-panel p-8 rounded-2xl border border-card-border shadow-lg">
         <div className="text-center">
-          <Link href="/" className="inline-flex items-center gap-2 font-bold text-2xl text-gradient tracking-tight">
-            <Briefcase className="w-7 h-7 text-primary" />
+          <Link href="/" className="inline-flex items-center gap-2 font-bold text-base sm:text-xl text-gradient tracking-tight whitespace-nowrap">
+            <Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-primary shrink-0" />
             <span>DevelopmentWala<span className="text-secondary">.org</span></span>
           </Link>
           <h2 className="mt-4 text-2xl font-extrabold text-foreground">Create a new account</h2>
@@ -156,7 +156,7 @@ function SignUpForm() {
                           setSelectedOrgId(org.id);
                           setShowSuggestions(false);
                         }}
-                        className="w-full px-3 py-2 flex items-center gap-2 hover:bg-primary/10 text-left text-foreground cursor-pointer text-xs"
+                        className="w-full px-3 py-2 flex items-center gap-2 hover:bg-primary/10 text-left text-foreground cursor-pointer text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                       >
                         {org.logo ? (
                           <img src={org.logo} alt="" className="w-5 h-5 rounded object-cover border border-card-border" />
@@ -206,7 +206,7 @@ function SignUpForm() {
                       setSelectedOrgId("new");
                       setSearchQuery("");
                     }}
-                    className="text-primary hover:underline cursor-pointer"
+                    className="text-primary hover:underline cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded px-1"
                   >
                     Clear selection
                   </button>
@@ -218,7 +218,7 @@ function SignUpForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-md text-xs mt-2 disabled:opacity-50"
+            className="w-full py-3 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-md text-xs mt-2 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             {isPending ? "Creating account..." : "Register Now"}
             {!isPending && <ArrowRight className="w-4 h-4" />}

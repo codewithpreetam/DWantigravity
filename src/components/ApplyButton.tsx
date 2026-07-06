@@ -84,7 +84,7 @@ export default function ApplyButton({
         href={externalApplyLink}
         target="_blank"
         rel="noopener noreferrer"
-        className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md w-fit"
+        className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-md w-fit focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         <span>Apply Externally</span>
         <ArrowUpRight className="w-4 h-4" />
@@ -191,7 +191,7 @@ export default function ApplyButton({
       <button
         onClick={openDialog}
         disabled={loadingProfile}
-        className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-md disabled:opacity-50"
+        className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-all cursor-pointer shadow-md disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         <span>{loadingProfile ? "Loading..." : label}</span>
         <ArrowUpRight className="w-4 h-4" />
@@ -211,7 +211,7 @@ export default function ApplyButton({
             </div>
             <button
               onClick={closeDialog}
-              className="text-xs text-muted hover:text-foreground cursor-pointer p-1.5 hover:bg-white/10 rounded-full"
+              className="text-xs text-muted hover:text-foreground cursor-pointer p-1.5 hover:bg-white/10 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               ✕
             </button>

@@ -3,7 +3,8 @@ import { Briefcase } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="border-t border-card-border bg-neutral-50 dark:bg-zinc-950 text-sm mt-auto">
+    <footer className="border-t border-card-border bg-neutral-50 dark:bg-zinc-950 text-sm mt-auto" aria-labelledby="footer-heading">
+      <h2 id="footer-heading" className="sr-only">Footer Navigation</h2>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Info */}
@@ -54,10 +55,10 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-card-border mt-8 pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-muted gap-4">
           <p>© {new Date().getFullYear()} DevelopmentWala.org. Built for the Indian Social Impact Sector.</p>
-          <div className="flex gap-4">
-            <Link href="#" className="hover:text-primary transition-colors">Twitter</Link>
-            <Link href="#" className="hover:text-primary transition-colors">LinkedIn</Link>
-            <Link href="#" className="hover:text-primary transition-colors">GitHub</Link>
+          <div className="flex gap-4" aria-label="Social media links">
+            <Link href="#" className="hover:text-primary transition-colors focus-visible:ring-2 focus-visible:outline-none rounded" aria-label="Twitter">Twitter</Link>
+            <Link href="#" className="hover:text-primary transition-colors focus-visible:ring-2 focus-visible:outline-none rounded" aria-label="LinkedIn">LinkedIn</Link>
+            <Link href="#" className="hover:text-primary transition-colors focus-visible:ring-2 focus-visible:outline-none rounded" aria-label="GitHub">GitHub</Link>
           </div>
         </div>
       </div>

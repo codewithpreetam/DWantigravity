@@ -17,7 +17,7 @@ export default function SortSelect({ defaultValue }: { defaultValue: string }) {
     <select
       defaultValue={defaultValue}
       onChange={handleChange}
-      className="border border-card-border rounded-xl bg-white/40 dark:bg-black/20 text-xs text-foreground p-2 font-semibold focus:outline-none cursor-pointer"
+      className="border border-card-border rounded-xl bg-white/40 dark:bg-black/20 text-xs text-foreground p-2 font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
     >
       <option value="RECENTLY_UPDATED">Recently Updated</option>
       <option value="NEWEST">Newest First</option>

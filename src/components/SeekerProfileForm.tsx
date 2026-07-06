@@ -381,7 +381,7 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
       <button 
         type="submit" 
         disabled={isPending}
-        className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-colors cursor-pointer w-fit self-start disabled:opacity-50"
+        className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-colors cursor-pointer w-fit self-start disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         {isPending ? "Saving Seeker Profile..." : "Save Seeker Profile"}
       </button>

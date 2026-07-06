@@ -30,7 +30,49 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
   const [customSkillInput, setCustomSkillInput] = useState("");
 
   const [descriptionHtml, setDescriptionHtml] = useState(editOpp?.description || "");
+  const [coverImage, setCoverImage] = useState<string>(editOpp?.coverImage || "");
   const editorRef = useRef<HTMLDivElement>(null);
+
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return reject("Canvas error");
+          
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > 1600) {
+            height = Math.round((height * 1600) / width);
+            width = 1600;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/webp", 0.8));
+        };
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  const handleCoverImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      try {
+        const base64Str = await compressImage(e.target.files[0]);
+        setCoverImage(base64Str);
+      } catch (err) {
+        console.error("Image compression failed", err);
+      }
+    }
+  };
 
   useEffect(() => {
     if (editorRef.current) {
@@ -65,6 +107,10 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
     const form = e.currentTarget;
     const formData = new FormData(form);
     formData.append("organizationId", organizationId);
+    
+    if (type === "EVENT" && coverImage) {
+      formData.append("coverImage", coverImage);
+    }
 
     // Append array criteria
     formData.delete("requiredSkills");
@@ -476,49 +522,122 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
           )}
 
           {type === "EVENT" && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-muted">Event Date</label>
-                  <input 
-                    type="date" 
-                    name="date" 
-                    required 
-                    defaultValue={formatDateVal(editOpp?.date)}
-                    className="form-input" 
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-muted">Event Time</label>
-                  <input 
-                    type="time" 
-                    name="time" 
-                    required 
-                    defaultValue={editOpp?.time || ""}
-                    className="form-input" 
-                  />
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
+                <label className="font-semibold text-muted">Event Cover Image (16:9 Recommended)</label>
+                <p className="text-[10px] text-muted -mt-1">For the best appearance across all devices, upload a 16:9 landscape image (recommended minimum size: 1600 × 900 px). JPG, PNG, and WebP are supported. It will be automatically optimized.</p>
+                <input 
+                  type="file" 
+                  accept="image/jpeg, image/png, image/webp" 
+                  onChange={handleCoverImageChange}
+                  className="form-input" 
+                />
+                {coverImage && (
+                  <div className="mt-2 relative w-full max-w-sm rounded-xl overflow-hidden border border-card-border shadow-sm aspect-video">
+                    <img src={coverImage} alt="Cover Preview" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => setCoverImage("")} className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-1 rounded">Remove</button>
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-muted">Capacity (Max Pax)</label>
-                  <input 
-                    type="number" 
-                    name="capacity" 
-                    defaultValue={editOpp?.capacity || 100} 
-                    className="form-input" 
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-muted">Price (INR, 0 for free)</label>
-                  <input 
-                    type="number" 
-                    name="price" 
-                    defaultValue={editOpp?.price || 0} 
-                    className="form-input" 
-                  />
-                </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Event Date</label>
+                <input type="date" name="date" required defaultValue={formatDateVal(editOpp?.date)} className="form-input" />
               </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Event Time</label>
+                <input type="time" name="time" required defaultValue={editOpp?.time || ""} className="form-input" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Time Zone</label>
+                <input type="text" name="timeZone" placeholder="e.g. IST, GMT" defaultValue={editOpp?.timeZone || ""} className="form-input" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Duration</label>
+                <input type="text" name="duration" placeholder="e.g. 2 Hours, 3 Days" defaultValue={editOpp?.duration || ""} className="form-input" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Registration Deadline</label>
+                <input type="date" name="registrationDeadline" defaultValue={formatDateVal(editOpp?.registrationDeadline)} className="form-input" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Capacity (Max Pax)</label>
+                <input type="number" name="capacity" defaultValue={editOpp?.capacity || ""} placeholder="e.g. 100" className="form-input" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Event Format</label>
+                <select name="format" defaultValue={editOpp?.format || "IN_PERSON"} className="form-input">
+                  <option value="IN_PERSON">In Person</option>
+                  <option value="ONLINE">Online</option>
+                  <option value="HYBRID">Hybrid</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Price (INR, 0 for free)</label>
+                <input type="number" name="price" defaultValue={editOpp?.price || 0} className="form-input" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Venue Name</label>
+                <input type="text" name="venue" defaultValue={editOpp?.venue || ""} placeholder="e.g. India Habitat Centre" className="form-input" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">City</label>
+                <input type="text" name="city" defaultValue={editOpp?.city || ""} placeholder="e.g. New Delhi" className="form-input" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">State</label>
+                <input type="text" name="state" defaultValue={editOpp?.state || ""} placeholder="e.g. Delhi" className="form-input" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Meeting Platform</label>
+                <input type="text" name="meetingPlatform" defaultValue={editOpp?.meetingPlatform || ""} placeholder="e.g. Zoom, Google Meet" className="form-input" />
+              </div>
+
+              <div className="col-span-1 md:col-span-2 flex flex-col gap-1">
+                <label className="font-semibold text-muted">Agenda / Schedule Summary</label>
+                <textarea name="agenda" defaultValue={editOpp?.agenda || ""} placeholder="Briefly describe the schedule..." className="form-input min-h-20"></textarea>
+              </div>
+
+              <div className="col-span-1 md:col-span-2 flex flex-col gap-1">
+                <label className="font-semibold text-muted">Target Audience</label>
+                <input type="text" name="audience" defaultValue={editOpp?.audience?.join(", ") || ""} placeholder="e.g. Students, NGO Professionals (comma separated)" className="form-input" />
+              </div>
+
+              <div className="col-span-1 md:col-span-2 flex flex-col gap-1">
+                <label className="font-semibold text-muted">Eligibility</label>
+                <input type="text" name="eligibility" defaultValue={editOpp?.eligibility || ""} placeholder="Any specific requirements to attend" className="form-input" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Contact Email</label>
+                <input type="email" name="contactEmail" defaultValue={editOpp?.contactEmail || ""} placeholder="info@event.org" className="form-input" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Contact Phone</label>
+                <input type="text" name="contactPhone" defaultValue={editOpp?.contactPhone || ""} placeholder="+91..." className="form-input" />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="font-semibold text-muted">Event Website</label>
+                <input type="url" name="website" defaultValue={editOpp?.website || ""} placeholder="https://..." className="form-input" />
+              </div>
+
+              <div className="flex items-center gap-4 mt-2">
+                <label className="flex items-center gap-2 text-sm font-semibold">
+                  <input type="checkbox" name="certificateAvailable" value="true" defaultChecked={editOpp?.certificateAvailable} className="w-4 h-4 rounded border-gray-300" />
+                  Certificate Available
+                </label>
+                <label className="flex items-center gap-2 text-sm font-semibold">
+                  <input type="checkbox" name="recordingAvailable" value="true" defaultChecked={editOpp?.recordingAvailable} className="w-4 h-4 rounded border-gray-300" />
+                  Recording Available
+                </label>
+              </div>
+
             </div>
           )}
 
@@ -717,7 +836,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
             <button 
               type="submit" 
               disabled={isPending}
-              className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-colors cursor-pointer w-fit disabled:opacity-50"
+              className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-colors cursor-pointer w-fit disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               {isPending 
                 ? (editOpp ? "Saving..." : "Publishing...") 
@@ -727,7 +846,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
             {editOpp && cancelUrl && (
               <Link
                 href={cancelUrl}
-                className="px-4 py-2.5 text-xs rounded border border-card-border hover:bg-white/10 font-semibold cursor-pointer text-muted flex items-center justify-center"
+                className="px-4 py-2.5 text-xs rounded border border-card-border hover:bg-white/10 font-semibold cursor-pointer text-muted flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 Cancel
               </Link>

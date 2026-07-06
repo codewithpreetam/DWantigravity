@@ -202,6 +202,7 @@ model Category {
   grants         Grant[]
   consultancies  Consultancy[]
   volunteers     Volunteer[]
+  events         Event[]
   blogs          Blog[]
 }
 
@@ -518,9 +519,15 @@ model SavedSearch {
 
 model Event {
   id            String       @id @default(cuid())
+  slug          String       @unique @default(cuid())
   title         String
   description   String
+  coverImage    String?
+  isActive      Boolean      @default(true)
   date          DateTime
+  time          String?
+  price         Int?
+  registrationDeadline DateTime?
   location      String
   format        EventFormat  @default(IN_PERSON)
   requiredSkills String[]
@@ -528,6 +535,28 @@ model Event {
   minExperienceYears Int?     @default(0)
   minEducation   String?
   requiredLanguages String[]
+  
+  capacity           Int?
+  website            String?
+  categoryId         String?
+  category           Category?    @relation(fields: [categoryId], references: [id])
+  tags               String[]     @default([])
+  audience           String[]     @default([])
+  eligibility        String?
+  contactEmail       String?
+  contactPhone       String?
+  agenda             String?
+  speakers           Json?
+  timeZone           String?
+  duration           String?
+  venue              String?
+  city               String?
+  state              String?
+  country            String?
+  meetingPlatform    String?
+  certificateAvailable Boolean    @default(false)
+  recordingAvailable Boolean      @default(false)
+
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 

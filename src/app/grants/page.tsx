@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { Landmark, Building, IndianRupee, Calendar, ArrowUpRight, Award } from "lucide-react";
-import { auth } from "@/auth";
-import ApplyButton from "@/components/ApplyButton";
 import FilterBar, { FilterConfig } from "@/components/FilterBar";
 import { getGrantFilterOptions } from "@/lib/filterOptions";
 
@@ -18,9 +16,6 @@ export default async function GrantsPage(props: PageProps) {
   const funding = searchParams.funding || "";
   const skill = searchParams.skill || "";
   const minEdu = searchParams.minEdu || "";
-  const selectedId = searchParams.id;
-  const session = await auth();
-  const user = session?.user;
 
   const raw = await db.grant.findMany({
     where: { isActive: true },
@@ -48,8 +43,6 @@ export default async function GrantsPage(props: PageProps) {
     return true;
   });
 
-  const selectedItem = selectedId ? filtered.find((i: any) => i.id === selectedId) || filtered[0] : filtered[0];
-
   const filters: FilterConfig[] = [
     { name: "skill", placeholder: "Skill/Focus Area", options: filterOpts.skills.slice(0, 40).map(v => ({ value: v, label: v })) },
     { name: "minEdu", placeholder: "Education", options: filterOpts.education.map(v => ({ value: v, label: v })) },
@@ -73,93 +66,38 @@ export default async function GrantsPage(props: PageProps) {
           <p className="text-xs text-muted max-w-xs mt-1">Try broadening your search or removing filters.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 items-start">
-          <div className="lg:col-span-5 space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-            {filtered.map((item: any) => {
-              const isSelected = selectedItem?.id === item.id;
-              const params = new URLSearchParams();
-              if (q) params.set("q", q);
-              if (funding) params.set("funding", funding);
-              return (
-                <Link key={item.id} href={`/grants?id=${item.id}&${params.toString()}`}
-                  className={`block glass-panel p-5 rounded-xl border text-left transition-all ${isSelected ? "border-primary ring-1 ring-primary bg-primary/5" : "hover:border-neutral-300 dark:hover:border-neutral-700"}`}>
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-bold text-sm text-foreground line-clamp-1">{item.title}</h3>
-                    <Award className="w-4 h-4 text-primary shrink-0" />
-                  </div>
-                  <p className="text-xs text-muted mt-1 flex items-center gap-1"><Building className="w-3.5 h-3.5" /> {item.organization?.name}</p>
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted mt-3">
-                    {item.amount && <span className="flex items-center gap-1"><IndianRupee className="w-3 h-3" /> Up to ₹{(item.amount / 100000).toFixed(1)}L</span>}
-                    {item.deadline && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(item.deadline).toLocaleDateString()}</span>}
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="lg:col-span-7 glass-panel p-6 rounded-xl border border-card-border sticky top-24">
-            {selectedItem ? (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full">Institutional Grant</span>
-                    {selectedItem.deadline && <span className="text-xs text-muted">Deadline: {new Date(selectedItem.deadline).toLocaleDateString()}</span>}
-                  </div>
-                  <h2 className="text-2xl font-extrabold text-foreground">{selectedItem.title}</h2>
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-muted mt-2">
-                    <span className="flex items-center gap-1"><Building className="w-4 h-4 text-primary" /> {selectedItem.organization?.name}</span>
-                    {selectedItem.amount && <span className="flex items-center gap-1"><IndianRupee className="w-4 h-4" /> Up to ₹{selectedItem.amount.toLocaleString("en-IN")}</span>}
-                  </div>
-                </div>
-
-                {selectedItem.requiredSkills?.length > 0 && (
-                  <div className="border-t border-card-border pt-4">
-                    <h4 className="text-xs font-bold text-foreground mb-2">Focus Areas / Skills</h4>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedItem.requiredSkills.map((s: string) => (
-                        <span key={s} className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-semibold rounded-full">{s}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t border-card-border pt-4">
-                  <h4 className="text-sm font-bold text-foreground mb-2">Grant Summary & Focus Areas</h4>
-                  <div className="text-xs text-muted leading-relaxed whitespace-pre-wrap prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: selectedItem.description }} />
-                </div>
-
-                {selectedItem.requirements && (
-                  <div className="border-t border-card-border pt-4">
-                    <h4 className="text-sm font-bold text-foreground mb-2">Eligibility & Compliance</h4>
-                    <p className="text-xs text-muted leading-relaxed whitespace-pre-line">{selectedItem.requirements}</p>
-                  </div>
-                )}
-
-                <div className="border-t border-card-border pt-6 flex items-center justify-between">
-                  <div className="text-xs text-muted">
-                    {user ? (
-                      session?.user?.role === "SEEKER"
-                        ? <span>Grants are open to organisations only</span>
-                        : <span>Submitting as: <strong className="text-foreground">{user.email}</strong></span>
-                    ) : <span>Requires sign-in to submit proposal</span>}
-                  </div>
-                  {user ? (
-                    session?.user?.role === "SEEKER" ? (
-                      <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-lg">
-                        ⚠️ Grants are open to NGO / organisation profiles only.
-                      </div>
-                    ) : (
-                      <ApplyButton opportunityId={selectedItem.id} opportunityTitle={selectedItem.title} opportunityType="GRANT" userEmail={user.email || undefined} label="Submit Proposal Draft" externalApplyLink={selectedItem.externalApplyLink} />
-                    )
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((item: any) => {
+            const params = new URLSearchParams();
+            if (q) params.set("q", q);
+            if (funding) params.set("funding", funding);
+            if (skill) params.set("skill", skill);
+            if (minEdu) params.set("minEdu", minEdu);
+            return (
+              <Link key={item.id} href={`/grants/${item.id}?${params.toString()}`}
+                className="block glass-panel p-5 rounded-xl border text-left transition-all hover:border-primary/40 hover:-translate-y-0.5">
+                <div className="flex items-center gap-2 mb-3">
+                  {item.organization?.logo ? (
+                    <img src={item.organization.logo} alt={item.organization.name || ""} className="w-8 h-8 object-contain rounded border border-card-border bg-white p-0.5 shrink-0" />
                   ) : (
-                    <Link href="/auth/signin?callbackUrl=/grants" className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-all">
-                      <span>Login to Apply</span><ArrowUpRight className="w-4 h-4" />
-                    </Link>
+                    <div className="w-8 h-8 rounded border border-card-border bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">{(item.organization?.name || "?").charAt(0)}</div>
                   )}
+                  <span className="text-xs text-muted font-medium truncate">{item.organization?.name}</span>
                 </div>
-              </div>
-            ) : null}
-          </div>
+                <div className="flex justify-between items-start gap-2">
+                  <h3 className="font-bold text-sm text-foreground line-clamp-2">{item.title}</h3>
+                  <Award className="w-4 h-4 text-primary shrink-0" />
+                </div>
+                <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted mt-3">
+                  {item.amount && <span className="flex items-center gap-1"><IndianRupee className="w-3 h-3" /> Up to ₹{(item.amount / 100000).toFixed(1)}L</span>}
+                  {item.deadline && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(item.deadline).toLocaleDateString()}</span>}
+                </div>
+                <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-end text-xs">
+                  <span className="inline-flex items-center gap-1 text-primary font-semibold">View Details <ArrowUpRight className="w-3.5 h-3.5" /></span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

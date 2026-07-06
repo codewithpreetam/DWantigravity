@@ -97,7 +97,7 @@ export default async function EventsPage(props: PageProps) {
             const isWebinar = item.format === "WEBINAR";
             const isHybrid = item.format === "HYBRID";
             return (
-              <div key={item.id} className="glass-panel p-6 rounded-xl flex flex-col justify-between min-h-[340px]">
+              <Link key={item.id} href={`/events/${item.slug}`} className="glass-panel-interactive p-0 rounded-xl flex flex-col justify-between overflow-hidden group min-h-[340px] hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-sm transition-all">
                 <script
                   type="application/ld+json"
                   dangerouslySetInnerHTML={{
@@ -115,77 +115,80 @@ export default async function EventsPage(props: PageProps) {
                           : "https://schema.org/OfflineEventAttendanceMode",
                       eventStatus: "https://schema.org/EventScheduled",
                       location: isWebinar
-                        ? { "@type": "VirtualLocation", url: "https://developmentwala.org/events" }
+                        ? { "@type": "VirtualLocation", url: `https://developmentwala.org/events/${item.slug}` }
                         : { "@type": "Place", name: item.location, address: { "@type": "PostalAddress", addressLocality: item.location, addressCountry: "IN" } },
                       organizer: { "@type": "Organization", name: item.organizer?.name || "DevelopmentWala", url: "https://developmentwala.org" },
-                      offers: { "@type": "Offer", price: "0", priceCurrency: "INR", availability: "https://schema.org/InStock" },
+                      offers: { "@type": "Offer", price: item.price ? item.price.toString() : "0", priceCurrency: "INR", availability: "https://schema.org/InStock" },
                     }),
                   }}
                 />
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                
+                {/* Cover Image */}
+                <div className="w-full aspect-video bg-neutral-100 dark:bg-neutral-800 relative overflow-hidden shrink-0 border-b border-card-border">
+                  {item.coverImage ? (
+                    <img src={item.coverImage} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-muted group-hover:scale-105 transition-transform duration-500 opacity-50">
+                      <Calendar className="w-10 h-10 mb-2" />
+                      <span className="text-xs font-semibold">Event Image</span>
+                    </div>
+                  )}
+                  <div className="absolute top-3 left-3 flex gap-2">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border shadow-sm backdrop-blur-md ${
                       isWebinar
-                        ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                        ? "bg-blue-500/80 text-white border-blue-400"
                         : isHybrid
-                        ? "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20"
-                        : "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
+                        ? "bg-teal-500/80 text-white border-teal-400"
+                        : "bg-purple-500/80 text-white border-purple-400"
                     }`}>
                       {FORMAT_LABEL[item.format] ?? item.format}
                     </span>
-                    <span className="text-[10px] text-muted flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(item.date).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
-                    </span>
                   </div>
-                  <h3 className="font-bold text-lg text-foreground line-clamp-2 hover:text-primary transition-colors leading-tight">{item.title}</h3>
-                  <p className="text-xs text-muted flex items-center gap-1.5">
-                    <Building className="w-3.5 h-3.5" /> {item.organizer?.name}
-                  </p>
-                  <p className="text-xs text-muted line-clamp-3 leading-relaxed">{item.description}</p>
-                  {item.requiredSkills?.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {item.requiredSkills.slice(0, 3).map((s: string) => (
-                        <span key={s} className="px-1.5 py-0.5 bg-primary/10 text-primary text-[9px] font-semibold rounded-full">{s}</span>
-                      ))}
-                      {item.requiredSkills.length > 3 && (
-                        <span className="px-1.5 py-0.5 bg-muted/20 text-muted text-[9px] font-semibold rounded-full">+{item.requiredSkills.length - 3}</span>
+                </div>
+
+                <div className="p-6 flex-1 flex flex-col">
+                  <div className="space-y-3 flex-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-muted flex items-center gap-1.5 font-bold">
+                        <Calendar className="w-3.5 h-3.5 text-primary" />
+                        {new Date(item.date).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    </div>
+                    <h3 className="font-extrabold text-lg text-foreground line-clamp-2 group-hover:text-primary transition-colors leading-tight">{item.title}</h3>
+                    <p className="text-xs text-muted flex items-center gap-1.5 font-semibold">
+                      <Building className="w-3.5 h-3.5" /> {item.organizer?.name}
+                    </p>
+                    <p className="text-xs text-muted line-clamp-2 leading-relaxed">{item.description}</p>
+                    {item.requiredSkills?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 pt-1">
+                        {item.requiredSkills.slice(0, 3).map((s: string) => (
+                          <span key={s} className="px-2 py-0.5 bg-neutral-100 dark:bg-zinc-800 border border-card-border text-foreground text-[9px] font-semibold rounded-md">{s}</span>
+                        ))}
+                        {item.requiredSkills.length > 3 && (
+                          <span className="px-2 py-0.5 bg-muted/20 text-muted text-[9px] font-semibold rounded-md">+{item.requiredSkills.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border-t border-card-border pt-4 mt-5 space-y-4">
+                    <div className="flex items-center justify-between text-xs text-muted font-medium">
+                      <span className="flex items-center gap-1.5 truncate pr-2">
+                        {isWebinar ? <Video className="w-3.5 h-3.5 text-primary" /> : <MapPin className="w-3.5 h-3.5 text-primary" />}
+                        <span className="truncate">{item.location}</span>
+                      </span>
+                      {item.certificateAvailable && (
+                        <span className="flex items-center gap-1 shrink-0"><FileBadge className="w-3.5 h-3.5 text-amber-500" /> Cert</span>
                       )}
                     </div>
-                  )}
-                </div>
-
-                <div className="border-t border-card-border pt-4 mt-4 space-y-4">
-                  <div className="flex items-center justify-between text-xs text-muted">
-                    <span className="flex items-center gap-1">
-                      {isWebinar ? <Video className="w-3.5 h-3.5" /> : <MapPin className="w-3.5 h-3.5" />}
-                      {item.location}
-                    </span>
-                    <span className="flex items-center gap-1"><FileBadge className="w-3.5 h-3.5" /> Certificate</span>
-                  </div>
-
-                  {user ? (
-                    <form action="/api/register-event" method="POST">
-                      <input type="hidden" name="eventId" value={item.id} />
-                      <button
-                        type="submit"
-                        className="w-full py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1 transition-all cursor-pointer shadow"
-                      >
-                        <span>Register For Event</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </button>
-                    </form>
-                  ) : (
-                    <Link
-                      href="/auth/signin?callbackUrl=/events"
-                      className="w-full py-2 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-foreground text-xs font-semibold rounded-lg flex items-center justify-center gap-1 transition-all"
-                    >
-                      <span>Login to Register</span>
+                    
+                    <div className="w-full py-2.5 bg-neutral-100 dark:bg-zinc-800 group-hover:bg-primary group-hover:text-white text-foreground text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all">
+                      <span>View Event Details</span>
                       <ArrowUpRight className="w-3.5 h-3.5" />
-                    </Link>
-                  )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

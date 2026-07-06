@@ -6,6 +6,7 @@ import {
   TrendingUp, MapPin, Building, FileText, Search,
   ShieldCheck,
 } from "lucide-react";
+import { TopOrganizations } from "@/components/TopOrganizations";
 
 export const revalidate = 0;
 
@@ -505,6 +506,9 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      {/* ── Top Organizations Hiring Now ──────────────────────────────── */}
+      <TopOrganizations />
     </div>
   );
 }

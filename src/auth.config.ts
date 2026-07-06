@@ -1,6 +1,17 @@
 import type { NextAuthConfig } from "next-auth";
 import { UserRole } from "@prisma/client";
 
+const resolvedAuthSecret =
+  process.env.AUTH_SECRET ||
+  process.env.NEXTAUTH_SECRET ||
+  (process.env.NODE_ENV !== "production" ? "dev-only-auth-secret-change-in-production" : undefined);
+
+if (process.env.NODE_ENV === "production" && !resolvedAuthSecret) {
+  throw new Error(
+    "Missing Auth.js secret. Set AUTH_SECRET (preferred) or NEXTAUTH_SECRET in production."
+  );
+}
+
 // Extend NextAuth typings
 declare module "next-auth" {
   interface User {
@@ -17,6 +28,7 @@ declare module "next-auth" {
 }
 
 export const authConfig = {
+  secret: resolvedAuthSecret,
   pages: {
     signIn: "/auth/signin",
     newUser: "/auth/signup",
