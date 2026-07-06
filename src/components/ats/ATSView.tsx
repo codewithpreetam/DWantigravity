@@ -382,7 +382,8 @@ export default function ATSView({ opportunities, applications }: ATSViewProps) {
 
         {/* Opportunities Table */}
         <div className="glass-panel rounded-xl border border-card-border overflow-hidden">
-          <table className="w-full text-xs">
+          <div className="overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <table className="w-full text-xs min-w-[600px]">
             <thead>
               <tr className="border-b border-card-border bg-neutral-50 dark:bg-neutral-900/50">
                 <th className="text-left px-4 py-3 text-muted font-semibold">Opportunity</th>
@@ -446,6 +447,7 @@ export default function ATSView({ opportunities, applications }: ATSViewProps) {
               )}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Keyboard hint */}
@@ -507,14 +509,14 @@ export default function ATSView({ opportunities, applications }: ATSViewProps) {
       </div>
 
       {/* ── Three-Pane Body ─────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden relative">
 
         {/* LEFT: Pipeline sidebar ──────────────────────────────────────── */}
-        <div className="w-44 shrink-0 border-r border-card-border bg-neutral-50/70 dark:bg-zinc-950/50 overflow-y-auto">
-          <div className="px-3 py-3 border-b border-card-border">
+        <div className="w-full lg:w-44 shrink-0 lg:border-r border-b lg:border-b-0 border-card-border bg-neutral-50/70 dark:bg-zinc-950/50 lg:overflow-y-auto overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="hidden lg:block px-3 py-3 border-b border-card-border">
             <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Pipeline</p>
           </div>
-          <div className="py-1">
+          <div className="flex lg:block py-2 px-3 lg:py-1 lg:px-0 min-w-max lg:min-w-0 gap-2 lg:gap-0">
             {PIPELINE_STAGES.map(stage => {
               const count = stageCounts[stage.key] ?? 0;
               const active = selectedStage === stage.key;
@@ -522,19 +524,19 @@ export default function ATSView({ opportunities, applications }: ATSViewProps) {
                 <button
                   key={stage.key}
                   onClick={() => { setSelectedStage(stage.key); setSelectedAppId(null); }}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-xs transition-colors group ${
+                  className={`flex items-center lg:justify-between px-4 py-2 text-xs transition-colors rounded-full lg:rounded-none group lg:w-full shrink-0 border border-transparent ${
                     active
-                      ? "bg-primary/10 text-primary font-semibold"
-                      : "text-muted hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground"
+                      ? "bg-primary text-white lg:bg-primary/10 lg:text-primary font-semibold border-primary"
+                      : "text-muted glass-panel lg:bg-transparent lg:border-transparent lg:shadow-none hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground"
                   }`}
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: stage.dot }} />
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: active ? "currentColor" : stage.dot }} />
                     <span className="truncate text-left">{stage.label}</span>
                   </div>
                   {count > 0 && (
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ml-1 ${
-                      active ? "bg-primary/20 text-primary" : "bg-neutral-200 dark:bg-neutral-800 text-muted"
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ml-1.5 lg:ml-1 ${
+                      active ? "bg-white/20 text-white lg:bg-primary/20 lg:text-primary" : "bg-neutral-200 dark:bg-neutral-800 text-muted"
                     }`}>
                       {count}
                     </span>
@@ -546,7 +548,7 @@ export default function ATSView({ opportunities, applications }: ATSViewProps) {
         </div>
 
         {/* CENTER: Candidate list ──────────────────────────────────────── */}
-        <div className="flex flex-col border-r border-card-border bg-white/30 dark:bg-black/20" style={{ width: "340px", minWidth: "280px" }}>
+        <div className={`flex-col lg:border-r border-card-border bg-white/30 dark:bg-black/20 lg:w-[340px] shrink-0 ${selectedAppId ? 'hidden lg:flex' : 'flex flex-1 lg:flex-none'}`}>
           {/* Search + Sort */}
           <div className="px-3 py-2 border-b border-card-border space-y-2">
             <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-900 rounded-lg px-2.5 py-1.5">
@@ -713,7 +715,7 @@ export default function ATSView({ opportunities, applications }: ATSViewProps) {
         </div>
 
         {/* RIGHT: Candidate Detail ─────────────────────────────────────── */}
-        <div className="flex-1 overflow-y-auto bg-white/20 dark:bg-zinc-950/20">
+        <div className={`flex-1 overflow-y-auto bg-white/20 dark:bg-zinc-950/20 ${selectedAppId ? 'block' : 'hidden lg:block'}`}>
           {!selectedApp ? (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted p-8">
               <UserCheck className="w-12 h-12 mb-3 opacity-20" />
@@ -731,11 +733,17 @@ export default function ATSView({ opportunities, applications }: ATSViewProps) {
                 {/* Candidate Header */}
                 <div className="px-5 py-4 border-b border-card-border bg-white/50 dark:bg-black/20 sticky top-0 z-10">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <button 
+                        onClick={() => setSelectedAppId(null)}
+                        className="lg:hidden p-1.5 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-muted transition-colors mr-1 shrink-0"
+                      >
+                        <ArrowLeft className="w-5 h-5" />
+                      </button>
                       <div className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
                         {initials(c?.name, c?.email || "")}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-extrabold text-sm text-foreground">{c?.name || c?.email}</h3>
                           <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${scoreColor(match.score)}`}>

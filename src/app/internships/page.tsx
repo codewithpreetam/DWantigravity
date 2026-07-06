@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import FilterBar, { FilterConfig } from "@/components/FilterBar";
 import { getInternshipFilterOptions } from "@/lib/filterOptions";
+import { Pagination } from "@/components/Pagination";
 
 export const revalidate = 0;
 
@@ -18,6 +19,7 @@ interface PageProps {
     skill?: string;
     minEdu?: string;
     stipend?: string;
+    page?: string;
   }>;
 }
 
@@ -29,6 +31,7 @@ export default async function InternshipsPage(props: PageProps) {
   const skill = searchParams.skill || "";
   const minEdu = searchParams.minEdu || "";
   const stipend = searchParams.stipend || "";
+  const page = parseInt(searchParams.page || "1", 10) || 1;
 
   const raw = await db.internship.findMany({
     where: { isActive: true },
@@ -38,7 +41,7 @@ export default async function InternshipsPage(props: PageProps) {
 
   const filterOpts = await getInternshipFilterOptions();
 
-  const filtered = raw.filter((item: any) => {
+  const filteredInternships = raw.filter((item: any) => {
     if (q) {
       const s = q.toLowerCase();
       const match =
@@ -59,6 +62,10 @@ export default async function InternshipsPage(props: PageProps) {
     }
     return true;
   });
+
+  const itemsPerPage = 21;
+  const totalPages = Math.ceil(filteredInternships.length / itemsPerPage);
+  const paginatedInternships = filteredInternships.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const filters: FilterConfig[] = [
     {
@@ -94,60 +101,65 @@ export default async function InternshipsPage(props: PageProps) {
         <div className="mb-4">
           <h1 className="text-3xl font-extrabold text-foreground tracking-tight">NGO Internships</h1>
           <p className="text-xs text-muted mt-1">
-            {filtered.length} internship{filtered.length !== 1 ? "s" : ""} — kickstart your career in social work.
+            {filteredInternships.length} internship{filteredInternships.length !== 1 ? "s" : ""} — kickstart your career in social work.
           </p>
         </div>
         <FilterBar filters={filters} searchPlaceholder="Search internships, skills, orgs..." q={q} />
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="glass-panel p-12 text-center rounded-xl flex-1 flex flex-col justify-center items-center">
-          <GraduationCap className="w-12 h-12 text-muted mb-4" />
-          <h3 className="text-lg font-bold text-foreground">No Internships Found</h3>
-          <p className="text-xs text-muted max-w-xs mt-1">Try broadening your search or removing some filters.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((item: any) => {
-            const params = new URLSearchParams();
-            if (q) params.set("q", q);
-            if (location) params.set("location", location);
-            if (duration) params.set("duration", duration);
-            if (skill) params.set("skill", skill);
-            if (minEdu) params.set("minEdu", minEdu);
-            if (stipend) params.set("stipend", stipend);
-            return (
-              <Link
-                key={item.id}
-                href={`/internships/${item.id}?${params.toString()}`}
-                className="block glass-panel p-5 rounded-xl border text-left transition-all hover:border-primary/40 hover:-translate-y-0.5"
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  {item.organization?.logo ? (
-                    <img src={item.organization.logo} alt={item.organization.name || ""} className="w-8 h-8 object-contain rounded border border-card-border bg-white p-0.5 shrink-0" />
-                  ) : (
-                    <div className="w-8 h-8 rounded border border-card-border bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">{(item.organization?.name || "?").charAt(0)}</div>
-                  )}
-                  <span className="text-xs text-muted font-medium truncate">{item.organization?.name}</span>
-                </div>
-                <div className="flex justify-between items-start gap-2">
-                  <h3 className="font-bold text-sm text-foreground line-clamp-2">{item.title}</h3>
-                  <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted mt-3">
-                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {item.location}</span>
-                  {item.stipend && <span className="flex items-center gap-1"><IndianRupee className="w-3 h-3" /> ₹{item.stipend.toLocaleString("en-IN")}/mo</span>}
-                  {item.durationMonths && <span>{item.durationMonths} Months</span>}
-                </div>
-                <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-xs text-muted">
-                  <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(item.createdAt).toLocaleDateString()}</span>
-                  <span className="inline-flex items-center gap-1 text-primary font-semibold">View Details <ArrowUpRight className="w-3.5 h-3.5" /></span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+      <div className="flex-1 space-y-6">
+        {filteredInternships.length === 0 ? (
+          <div className="glass-panel p-12 text-center rounded-xl flex-1 flex flex-col justify-center items-center">
+            <GraduationCap className="w-12 h-12 text-muted mb-4" />
+            <h3 className="text-lg font-bold text-foreground">No Internships Found</h3>
+            <p className="text-xs text-muted max-w-xs mt-1">Try broadening your search or removing some filters.</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {paginatedInternships.map((item: any) => {
+                const params = new URLSearchParams();
+                if (q) params.set("q", q);
+                if (location) params.set("location", location);
+                if (duration) params.set("duration", duration);
+                if (skill) params.set("skill", skill);
+                if (minEdu) params.set("minEdu", minEdu);
+                if (stipend) params.set("stipend", stipend);
+                return (
+                  <Link
+                    key={item.id}
+                    href={`/internships/${item.id}?${params.toString()}`}
+                    className="block glass-panel p-5 rounded-xl border text-left transition-all hover:border-primary/40 hover:-translate-y-0.5"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      {item.organization?.logo ? (
+                        <img src={item.organization.logo} alt={item.organization.name || ""} className="w-8 h-8 object-contain rounded border border-card-border bg-white p-0.5 shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded border border-card-border bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">{(item.organization?.name || "?").charAt(0)}</div>
+                      )}
+                      <span className="text-xs text-muted font-medium truncate">{item.organization?.name}</span>
+                    </div>
+                    <div className="flex justify-between items-start gap-2">
+                      <h3 className="font-bold text-sm text-foreground line-clamp-2">{item.title}</h3>
+                      <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted mt-3">
+                      <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {item.location}</span>
+                      {item.stipend && <span className="flex items-center gap-1"><IndianRupee className="w-3 h-3" /> ₹{item.stipend.toLocaleString("en-IN")}/mo</span>}
+                      {item.durationMonths && <span>{item.durationMonths} Months</span>}
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-xs text-muted">
+                      <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(item.createdAt).toLocaleDateString()}</span>
+                      <span className="inline-flex items-center gap-1 text-primary font-semibold">View Details <ArrowUpRight className="w-3.5 h-3.5" /></span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+            {totalPages > 1 && <Pagination currentPage={page} totalPages={totalPages} />}
+          </>
+        )}
+      </div>
     </div>
   );
 }

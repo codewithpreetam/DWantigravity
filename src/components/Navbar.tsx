@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { ThemeToggle } from "./ThemeToggle";
-import { Menu, ChevronDown, Briefcase, HandHeart, GraduationCap, Landmark, Calendar } from "lucide-react";
+import { ChevronDown, Briefcase, HandHeart, GraduationCap, Landmark, Calendar, Home } from "lucide-react";
 import { db } from "@/lib/db";
 import UserMenu from "./UserMenu";
+import { MobileMenu } from "./MobileMenu";
 
 export async function Navbar() {
   const session = await auth();
@@ -38,11 +39,11 @@ export async function Navbar() {
     : null;
 
   const opportunityLinks = [
-    { label: "Jobs", href: "/jobs", desc: "Full-time & contract", icon: Briefcase },
-    { label: "Fellowships", href: "/fellowships", desc: "Leadership & immersion", icon: HandHeart },
-    { label: "Internships", href: "/internships", desc: "Learning opportunities", icon: GraduationCap },
-    { label: "Grants", href: "/grants", desc: "Funding opportunities", icon: Landmark },
-    { label: "Events", href: "/events", desc: "Conferences, workshops, webinars & networking", icon: Calendar, fullWidth: true },
+    { label: "Jobs", href: "/jobs", desc: "Full-time & contract", icon: Briefcase, iconName: "Briefcase" },
+    { label: "Fellowships", href: "/fellowships", desc: "Leadership & immersion", icon: HandHeart, iconName: "HandHeart" },
+    { label: "Internships", href: "/internships", desc: "Learning opportunities", icon: GraduationCap, iconName: "GraduationCap" },
+    { label: "Grants", href: "/grants", desc: "Funding opportunities", icon: Landmark, iconName: "Landmark" },
+    { label: "Events", href: "/events", desc: "Conferences, workshops, webinars & networking", icon: Calendar, iconName: "Calendar", fullWidth: true },
   ];
 
   const mainLinks = [
@@ -106,6 +107,13 @@ export async function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <Link
+            href="/"
+            aria-label="Home"
+            className="p-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-neutral-100/50 dark:bg-neutral-900/50 hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors flex items-center justify-center cursor-pointer"
+          >
+            <Home className="w-4 h-4 text-neutral-800 dark:text-neutral-200" />
+          </Link>
           <ThemeToggle />
 
           <div className="hidden lg:flex items-center gap-2">
@@ -132,78 +140,12 @@ export async function Navbar() {
             )}
           </div>
 
-          <details className="lg:hidden relative group">
-            <summary className="list-none p-2 rounded-lg border border-card-border bg-white/50 dark:bg-black/30 cursor-pointer hover:bg-white/70 dark:hover:bg-black/40 transition-colors">
-              <Menu className="w-4 h-4 text-foreground" />
-            </summary>
-            <div className="absolute right-0 mt-2 w-[min(92vw,22rem)] rounded-xl border border-card-border bg-white/95 dark:bg-black/95 shadow-xl p-3 space-y-3">
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Opportunities</p>
-                <nav className="grid grid-cols-2 gap-2 text-xs font-semibold">
-                  {opportunityLinks.map((link) => (
-                    <Link
-                      key={`mobile-opp-${link.href}`}
-                      href={link.href}
-                      className={`px-2.5 py-2 rounded-lg border border-card-border hover:bg-primary/10 hover:text-primary transition-colors ${link.fullWidth ? "col-span-2" : ""}`}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-card-border">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Explore</p>
-                <nav className="grid grid-cols-2 gap-2 text-xs font-semibold">
-                  {mainLinks.map((link) => (
-                    <Link
-                      key={`mobile-main-${link.href}`}
-                      href={link.href}
-                      className="px-2.5 py-2 rounded-lg border border-card-border hover:bg-primary/10 hover:text-primary transition-colors"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </nav>
-              </div>
-
-              {userMenuData ? (
-                <Link
-                  href={
-                    userMenuData.role === "ADMIN"
-                      ? "/dashboard/admin"
-                      : userMenuData.role === "EMPLOYER"
-                        ? "/dashboard/employer"
-                        : "/dashboard/candidate"
-                  }
-                  className="w-full inline-flex justify-center px-3 py-2 rounded-lg bg-primary text-white font-semibold text-xs"
-                >
-                  Go to Dashboard
-                </Link>
-              ) : (
-                <div className="grid grid-cols-1 gap-2 pt-1 border-t border-card-border">
-                  <Link
-                    href="/auth/signin"
-                    className="w-full text-center px-3 py-2 rounded-lg border border-card-border text-xs font-semibold hover:bg-white/70 dark:hover:bg-black/30"
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/auth/signup"
-                    className="w-full text-center px-3 py-2 rounded-lg bg-primary text-white text-xs font-semibold"
-                  >
-                    Sign Up
-                  </Link>
-                  <Link
-                    href="/auth/signup?role=EMPLOYER"
-                    className="w-full text-center px-3 py-2 rounded-lg border border-primary text-primary text-xs font-semibold"
-                  >
-                    Employer Portal
-                  </Link>
-                </div>
-              )}
-            </div>
-          </details>
+          <MobileMenu
+            oppLinks={opportunityLinks.map(o => ({ label: o.label, href: o.href, desc: o.desc }))}
+            mainLinks={mainLinks}
+            userMenuData={userMenuData}
+            orgName={orgName}
+          />
         </div>
       </div>
     </header>

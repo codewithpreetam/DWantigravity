@@ -12,7 +12,7 @@ function SignInForm() {
   const signupSuccess = searchParams.get("signup") === "success";
 
   return (
-    <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative bg-gradient-glow w-full">
+    <div className="flex-1 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative bg-gradient-glow w-full overflow-x-hidden">
       <div className="absolute top-20 left-1/3 w-80 h-80 bg-primary/10 rounded-full blur-3xl -z-10 animate-pulse"></div>
       
       <div className="max-w-md w-full space-y-8 glass-panel p-8 rounded-2xl border border-card-border shadow-lg">

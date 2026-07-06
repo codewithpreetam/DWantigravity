@@ -41,7 +41,7 @@ export default function AboutPage() {
         
         <div className="pt-6 w-full max-w-2xl text-left">
             <h3 className="text-lg font-bold text-foreground mb-4 text-center">Today, the platform brings together opportunities from across India, including:</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs text-muted">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs text-muted">
                 <div className="glass-panel p-3 rounded-lg flex items-center gap-2"><Target className="w-4 h-4 text-primary"/> NGO Jobs</div>
                 <div className="glass-panel p-3 rounded-lg flex items-center gap-2"><Target className="w-4 h-4 text-primary"/> Internships</div>
                 <div className="glass-panel p-3 rounded-lg flex items-center gap-2"><Target className="w-4 h-4 text-primary"/> Fellowships</div>
@@ -130,7 +130,7 @@ export default function AboutPage() {
       {/* ── Powered by Development Wala ── */}
       <section className="bg-gradient-to-br from-neutral-100 to-neutral-50 dark:from-zinc-900 dark:to-zinc-950 p-8 sm:p-10 rounded-2xl border border-card-border space-y-8 flex flex-col items-center text-center">
         <img
-          src="/development-wala-logo.png"
+          src="/Development wala logo a platform for hiring social sector ngo csr non profit jobs internship scholarship in India.png"
           alt="Development Wala Main Logo"
           className="h-24 object-contain"
         />
@@ -176,7 +176,7 @@ export default function AboutPage() {
         <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
             <div className="shrink-0">
                 <img
-                    src="/kumar-preetam-puri.jpg"
+                    src="https://developmentwala.com/wp-content/uploads/2025/06/Kumar-Preetam-Puri_Founder-Development-Wala.jpg"
                     alt="Kumar Preetam Puri - Founder Profile Pic"
                     className="w-48 h-48 md:w-64 md:h-64 rounded-2xl object-cover shadow-lg border-2 border-primary/20"
                 />

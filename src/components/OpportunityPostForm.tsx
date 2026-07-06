@@ -344,7 +344,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
 
           {type === "JOB" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="font-semibold text-muted">Min Salary (INR/year)</label>
                   <input 
@@ -366,7 +366,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="font-semibold text-muted">Employment Type</label>
                   <select 
@@ -399,7 +399,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
           )}
 
           {(type === "INTERNSHIP" || type === "FELLOWSHIP") && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label className="font-semibold text-muted">Stipend (INR/month)</label>
                 <input 
@@ -424,7 +424,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
           )}
 
           {type === "SCHOLARSHIP" && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label className="font-semibold text-muted">Award Amount (INR)</label>
                 <input 
@@ -449,7 +449,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
 
           {type === "GRANT" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex flex-col gap-1">
                   <label className="font-semibold text-muted">Min Funding (INR)</label>
                   <input 

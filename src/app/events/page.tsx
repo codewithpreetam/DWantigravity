@@ -4,6 +4,7 @@ import { Calendar, MapPin, Building, Video, FileBadge, ArrowUpRight } from "luci
 import { auth } from "@/auth";
 import FilterBar, { FilterConfig } from "@/components/FilterBar";
 import { getEventFilterOptions } from "@/lib/filterOptions";
+import { Pagination } from "@/components/Pagination";
 
 export const revalidate = 0;
 
@@ -14,7 +15,7 @@ const FORMAT_LABEL: Record<string, string> = {
 };
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; status?: string; format?: string; location?: string; skill?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; format?: string; location?: string; skill?: string; page?: string }>;
 }
 
 export default async function EventsPage(props: PageProps) {
@@ -24,6 +25,7 @@ export default async function EventsPage(props: PageProps) {
   const status = searchParams.status;
   const location = searchParams.location || "";
   const skill = searchParams.skill || "";
+  const page = parseInt(searchParams.page || "1", 10) || 1;
   const session = await auth();
   const user = session?.user;
 
@@ -48,6 +50,10 @@ export default async function EventsPage(props: PageProps) {
     if (skill && !item.requiredSkills.some((sk: string) => sk.toLowerCase() === skill.toLowerCase())) return false;
     return true;
   });
+
+  const itemsPerPage = 21;
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedEvents = filtered.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   const filters: FilterConfig[] = [
     {
@@ -85,17 +91,25 @@ export default async function EventsPage(props: PageProps) {
         </div>
       )}
 
-      {filtered.length === 0 ? (
-        <div className="glass-panel p-12 text-center rounded-xl flex-1 flex flex-col justify-center items-center">
-          <Calendar className="w-12 h-12 text-muted mb-4" />
-          <h3 className="text-lg font-bold text-foreground">No Events Found</h3>
-          <p className="text-xs text-muted max-w-xs mt-1">Try broadening your search or removing filters.</p>
+      {/* Results */}
+      <div className="flex-1 space-y-6">
+        <div className="flex items-center justify-between bg-white dark:bg-zinc-950 p-4 rounded-xl border border-card-border shadow-sm">
+          <p className="text-sm text-muted font-medium">
+            Showing <strong className="text-foreground">{paginatedEvents.length}</strong> of <strong className="text-foreground">{filtered.length}</strong> events
+          </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((item: any) => {
-            const isWebinar = item.format === "WEBINAR";
-            const isHybrid = item.format === "HYBRID";
+
+        {paginatedEvents.length === 0 ? (
+          <div className="glass-panel p-12 text-center rounded-xl flex-1 flex flex-col justify-center items-center">
+            <Calendar className="w-12 h-12 text-muted mb-4" />
+            <h3 className="text-lg font-bold text-foreground">No Events Found</h3>
+            <p className="text-xs text-muted max-w-xs mt-1">Try broadening your search or removing filters.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedEvents.map((item: any) => {
+              const isWebinar = item.format === "WEBINAR";
+              const isHybrid = item.format === "HYBRID";
             return (
               <Link key={item.id} href={`/events/${item.slug}`} className="glass-panel-interactive p-0 rounded-xl flex flex-col justify-between overflow-hidden group min-h-[340px] hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-sm transition-all">
                 <script
@@ -192,7 +206,10 @@ export default async function EventsPage(props: PageProps) {
             );
           })}
         </div>
-      )}
+        )}
+        
+        <Pagination currentPage={page} totalPages={totalPages} />
+      </div>
     </div>
   );
 }

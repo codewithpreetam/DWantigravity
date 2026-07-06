@@ -9,6 +9,7 @@ import {
 import { UserRole } from "@prisma/client";
 import SupportChat from "@/components/SupportChat";
 import SeekerProfileForm from "@/components/SeekerProfileForm";
+import { DashboardMobileNav } from "@/components/DashboardMobileNav";
 import { 
   getMessagesAction, 
   getNotificationsAction, 
@@ -123,24 +124,40 @@ export default async function CandidateDashboard(props: PageProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1">
       <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-4 text-left">
+        <div className="flex items-start gap-4 text-left min-w-0 flex-1">
           {candidate?.profilePhoto ? (
-            <img src={candidate.profilePhoto} alt="" className="w-16 h-16 rounded-full object-cover border border-card-border" />
+            <img src={candidate.profilePhoto} alt="" className="w-16 h-16 rounded-full object-cover border border-card-border shrink-0" />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-card-border uppercase">
+            <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-card-border uppercase shrink-0">
               {candidate?.name?.substring(0, 1) || "S"}
             </div>
           )}
-          <div>
-            <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Candidate Dashboard</h1>
-            <p className="text-xs text-muted mt-0.5">Welcome back, <strong className="text-foreground">{candidate?.name || candidate?.email}</strong>. Manage your profile and applications.</p>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-foreground tracking-tight break-words">Candidate Dashboard</h1>
+            <p className="text-xs text-muted mt-0.5 truncate">Welcome back, <strong className="text-foreground">{candidate?.name || candidate?.email}</strong>. Manage your profile and applications.</p>
           </div>
         </div>
       </div>
 
+      {/* Mobile navigation (Hamburger Drawer) */}
+      <DashboardMobileNav 
+        tabs={[
+          { id: "dashboard", label: "Dashboard", icon: <Briefcase className="w-4 h-4 shrink-0" /> },
+          { id: "applications", label: "My Applications", icon: <Briefcase className="w-4 h-4 shrink-0" /> },
+          { id: "saved", label: "Saved Opportunities", icon: <Award className="w-4 h-4 shrink-0" /> },
+          { id: "profile", label: "My Profile", icon: <User className="w-4 h-4 shrink-0" /> },
+          { id: "resumes", label: "Resumes", icon: <FileText className="w-4 h-4 shrink-0" /> },
+          { id: "cover-letters", label: "Cover Letters", icon: <FileText className="w-4 h-4 shrink-0" /> },
+          { id: "tickets", label: "Event Tickets", icon: <Calendar className="w-4 h-4 shrink-0" /> },
+          { id: "notifications", label: "Notifications", icon: <Bell className="w-4 h-4 shrink-0" /> },
+        ]}
+        basePath="/dashboard/candidate"
+        title="Candidate Dashboard"
+      />
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Navigation Sidebar */}
-        <div className="lg:col-span-3 space-y-2">
+        {/* Navigation Sidebar — desktop only */}
+        <div className="hidden lg:block lg:col-span-3 space-y-2">
           {/* Sidebar Menu Links */}
           {[
             { id: "dashboard", label: "Dashboard", icon: Briefcase, fallbackTab: "applications" },

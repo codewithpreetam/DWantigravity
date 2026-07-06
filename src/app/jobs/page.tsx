@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import FilterBar, { FilterConfig } from "@/components/FilterBar";
 import { getJobFilterOptions } from "@/lib/filterOptions";
+import { Pagination } from "@/components/Pagination";
 
 export const revalidate = 0;
 
@@ -45,6 +46,7 @@ interface PageProps {
     salaryMin?: string;
     salaryMax?: string;
     sort?: string;
+    page?: string;
   }>;
 }
 
@@ -61,6 +63,8 @@ export default async function JobsPage(props: PageProps) {
   const salaryMinParam = searchParams.salaryMin || "";
   const salaryMaxParam = searchParams.salaryMax || "";
   const sort = searchParams.sort || "newest";
+  const pageParam = searchParams.page || "1";
+  const page = parseInt(pageParam, 10) || 1;
 
   // Fetch all active jobs with org relations
   const rawJobs = await db.job.findMany({
@@ -117,6 +121,10 @@ export default async function JobsPage(props: PageProps) {
     }
     return true;
   });
+
+  const itemsPerPage = 21;
+  const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
+  const paginatedJobs = filteredJobs.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
   // Build filter configs
   const filters: FilterConfig[] = [
@@ -192,69 +200,79 @@ export default async function JobsPage(props: PageProps) {
         />
       </div>
 
-      {filteredJobs.length === 0 ? (
-        <div className="glass-panel p-12 text-center rounded-xl flex-1 flex flex-col justify-center items-center">
-          <Briefcase className="w-12 h-12 text-muted mb-4" />
-          <h3 className="text-lg font-bold text-foreground">No Jobs Found</h3>
-          <p className="text-xs text-muted max-w-xs mt-1">Try broadening your search or removing some filters.</p>
+      <div className="flex-1 space-y-6">
+        <div className="flex items-center justify-between bg-white dark:bg-zinc-950 p-4 rounded-xl border border-card-border shadow-sm">
+          <p className="text-sm text-muted font-medium">
+            Showing <strong className="text-foreground">{paginatedJobs.length}</strong> of <strong className="text-foreground">{filteredJobs.length}</strong> jobs
+          </p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredJobs.map((job: any) => {
-            const orgSlug = slugify(job.organization?.name || "ngo");
-            const jobSlug = slugify(`${job.title}-${job.workMode === "REMOTE" ? "remote" : job.location}`);
-            const params = new URLSearchParams();
-            if (q) params.set("q", q);
-            if (workMode) params.set("workMode", workMode);
-            if (employmentType) params.set("employmentType", employmentType);
-            if (location) params.set("location", location);
-            if (skill) params.set("skill", skill);
-            if (minExp) params.set("minExp", minExp);
-            if (minEdu) params.set("minEdu", minEdu);
-            if (salaryMin > salaryBoundMin) params.set("salaryMin", String(salaryMin));
-            if (salaryMax < salaryBoundMax) params.set("salaryMax", String(salaryMax));
-            if (sort) params.set("sort", sort);
-            return (
-              <Link
-                key={job.id}
-                href={`/jobs/${orgSlug}/${jobSlug}?${params.toString()}`}
-                className="block glass-panel p-5 rounded-xl border text-left transition-all hover:border-primary/40 hover:-translate-y-0.5"
-              >
-                  <div className="flex items-center gap-2 mb-3">
-                    {job.organization?.logo ? (
-                      <img src={job.organization.logo} alt={job.organization.name || ""} className="w-8 h-8 object-contain rounded border border-card-border bg-white p-0.5 shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded border border-card-border bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">{(job.organization?.name || "?").charAt(0)}</div>
+
+        {paginatedJobs.length === 0 ? (
+          <div className="glass-panel p-12 text-center rounded-xl flex-1 flex flex-col justify-center items-center">
+            <Briefcase className="w-12 h-12 text-muted mb-4" />
+            <h3 className="text-lg font-bold text-foreground">No Jobs Found</h3>
+            <p className="text-xs text-muted max-w-xs mt-1">Try broadening your search or removing some filters.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {paginatedJobs.map((job: any) => {
+              const orgSlug = slugify(job.organization?.name || "ngo");
+              const jobSlug = slugify(`${job.title}-${job.workMode === "REMOTE" ? "remote" : job.location}`);
+              const params = new URLSearchParams();
+              if (q) params.set("q", q);
+              if (workMode) params.set("workMode", workMode);
+              if (employmentType) params.set("employmentType", employmentType);
+              if (location) params.set("location", location);
+              if (skill) params.set("skill", skill);
+              if (minExp) params.set("minExp", minExp);
+              if (minEdu) params.set("minEdu", minEdu);
+              if (salaryMin > salaryBoundMin) params.set("salaryMin", String(salaryMin));
+              if (salaryMax < salaryBoundMax) params.set("salaryMax", String(salaryMax));
+              if (sort) params.set("sort", sort);
+              return (
+                <Link
+                  key={job.id}
+                  href={`/jobs/${orgSlug}/${jobSlug}?${params.toString()}`}
+                  className="block glass-panel p-5 rounded-xl border text-left transition-all hover:border-primary/40 hover:-translate-y-0.5"
+                >
+                    <div className="flex items-center gap-2 mb-3">
+                      {job.organization?.logo ? (
+                        <img src={job.organization.logo} alt={job.organization.name || ""} className="w-8 h-8 object-contain rounded border border-card-border bg-white p-0.5 shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded border border-card-border bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">{(job.organization?.name || "?").charAt(0)}</div>
+                      )}
+                      <span className="text-xs text-muted font-medium truncate">{job.organization?.name}</span>
+                    </div>
+                    <div className="flex justify-between items-start gap-2">
+                      <h3 className="font-bold text-sm text-foreground line-clamp-2">{job.title}</h3>
+                      <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+                    </div>
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted mt-3">
+                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {job.location}</span>
+                    {(job.salaryMin || job.salaryMax) && (
+                      <span className="flex items-center gap-1">
+                        <IndianRupee className="w-3 h-3" />
+                        ₹{((job.salaryMin || 0) / 100000).toFixed(1)}L–{((job.salaryMax || 0) / 100000).toFixed(1)}L
+                      </span>
                     )}
-                    <span className="text-xs text-muted font-medium truncate">{job.organization?.name}</span>
+                    {job.workMode && (
+                      <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold">
+                        {prettifyMode(job.workMode)}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-bold text-sm text-foreground line-clamp-2">{job.title}</h3>
-                    <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+                  <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-xs text-muted">
+                    <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(job.createdAt).toLocaleDateString()}</span>
+                    <span className="inline-flex items-center gap-1 text-primary font-semibold">View Details <ArrowUpRight className="w-3.5 h-3.5" /></span>
                   </div>
-                <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted mt-3">
-                  <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {job.location}</span>
-                  {(job.salaryMin || job.salaryMax) && (
-                    <span className="flex items-center gap-1">
-                      <IndianRupee className="w-3 h-3" />
-                      ₹{((job.salaryMin || 0) / 100000).toFixed(1)}L–{((job.salaryMax || 0) / 100000).toFixed(1)}L
-                    </span>
-                  )}
-                  {job.workMode && (
-                    <span className="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold">
-                      {prettifyMode(job.workMode)}
-                    </span>
-                  )}
-                </div>
-                <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-between text-xs text-muted">
-                  <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(job.createdAt).toLocaleDateString()}</span>
-                  <span className="inline-flex items-center gap-1 text-primary font-semibold">View Details <ArrowUpRight className="w-3.5 h-3.5" /></span>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+                </Link>
+              );
+            })}
+          </div>
+        )}
+        
+        <Pagination currentPage={page} totalPages={totalPages} />
+      </div>
     </div>
   );
 }

@@ -7,8 +7,9 @@ import {
   CheckCircle, ShieldCheck, Briefcase, Star, Clock, Calendar, 
   BarChart3, Settings, AlertCircle, Phone, Globe, Trash2, 
   ArrowUpRight, Search, SlidersHorizontal, UserPlus, Eye, LayoutDashboard,
-  Bookmark, Share2, Percent, Edit3, Lock, Bell
+  Bookmark, Share2, Percent, Edit3, Lock, Bell, Building2, HelpCircle
 } from "lucide-react";
+import { DashboardMobileNav } from "@/components/DashboardMobileNav";
 import OpportunityPostForm from "@/components/OpportunityPostForm";
 import ATSFilterSelect from "@/components/ATSFilterSelect";
 import SupportChat from "@/components/SupportChat";
@@ -247,30 +248,30 @@ export default async function EmployerDashboardPage(props: PageProps) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 flex flex-col">
       {/* Workspace Header Banner */}
       <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-card-border pb-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-4 min-w-0 flex-1">
           {org.logo ? (
-            <img src={org.logo} alt="" className="w-14 h-14 rounded-xl object-contain border border-card-border p-1 bg-white" />
+            <img src={org.logo} alt="" className="w-14 h-14 rounded-xl object-contain border border-card-border p-1 bg-white shrink-0" />
           ) : (
-            <div className="w-14 h-14 bg-primary/10 text-primary flex items-center justify-center font-bold rounded-xl text-xl">
+            <div className="w-14 h-14 bg-primary/10 text-primary flex items-center justify-center font-bold rounded-xl text-xl shrink-0">
               {org.name.substring(0, 1)}
             </div>
           )}
-          <div>
-            <h1 className="text-2xl font-extrabold text-foreground tracking-tight flex items-center gap-2">
-              <span>{org.name} Workspace</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight flex flex-wrap items-center gap-2">
+              <span className="break-words">{org.name} Workspace</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 shrink-0">
                 Active ATS
               </span>
             </h1>
-            <p className="text-xs text-muted mt-0.5">Recruiter Dashboard &middot; Welcome, <strong className="text-foreground">{recruiter.name || recruiter.email}</strong></p>
+            <p className="text-xs text-muted mt-0.5 truncate">Recruiter Dashboard &middot; Welcome, <strong className="text-foreground">{recruiter.name || recruiter.email}</strong></p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 w-full md:w-auto">
           <Link 
             href={`/${org.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`} 
             target="_blank" 
-            className="flex items-center gap-1 text-xs text-muted hover:text-foreground font-semibold px-3 py-1.5 rounded-lg border border-card-border glass-panel transition-all"
+            className="flex items-center justify-center w-full md:w-auto gap-1 text-xs text-muted hover:text-foreground font-semibold px-3 py-1.5 rounded-lg border border-card-border glass-panel transition-all"
           >
             <span>View Public NGO Profile</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -278,10 +279,28 @@ export default async function EmployerDashboardPage(props: PageProps) {
         </div>
       </div>
 
+      {/* Mobile navigation (Hamburger Drawer) */}
+      <DashboardMobileNav 
+        tabs={[
+          { id: "overview", label: "Overview", icon: <Building2 className="w-4 h-4 shrink-0" /> },
+          { id: "ats", label: "ATS Pipeline", icon: <Users className="w-4 h-4 shrink-0" /> },
+          { id: "jobs-manager", label: "Opportunities", icon: <FileText className="w-4 h-4 shrink-0" /> },
+          { id: "analytics", label: "Analytics", icon: <Search className="w-4 h-4 shrink-0" /> },
+          { id: "team", label: "Team Directory", icon: <Users className="w-4 h-4 shrink-0" /> },
+          { id: "org", label: "Organization Profile", icon: <Building2 className="w-4 h-4 shrink-0" /> },
+          { id: "recruiter-profile", label: "Recruiter Profile", icon: <User className="w-4 h-4 shrink-0" /> },
+          { id: "billing", label: "Plan & Billing", icon: <CreditCard className="w-4 h-4 shrink-0" /> },
+          { id: "settings", label: "Account Settings", icon: <Settings className="w-4 h-4 shrink-0" /> },
+          { id: "support", label: "Help & Support", icon: <HelpCircle className="w-4 h-4 shrink-0" /> },
+        ]}
+        basePath="/dashboard/employer"
+        title="Employer Workspace"
+      />
+
       {/* Grid Content */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start flex-1">
-        {/* Navigation Sidebar */}
-        <div className="lg:col-span-3 space-y-1.5 sticky top-24 z-10">
+        {/* Navigation Sidebar — desktop only */}
+        <div className="hidden lg:block lg:col-span-3 space-y-1.5 sticky top-24 z-10">
           {[
             { id: "overview", label: "Workspace Overview", icon: LayoutDashboard },
             { id: "ats", label: "ATS Pipeline Board", icon: Users },
@@ -326,7 +345,7 @@ export default async function EmployerDashboardPage(props: PageProps) {
               </div>
 
               {/* Grid cards for main stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="glass-panel p-4 rounded-xl border border-card-border">
                   <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Active Roles</p>
                   <p className="text-2xl font-black text-foreground mt-1">{opportunities.filter((o: any) => o.isActive).length}</p>
@@ -546,10 +565,10 @@ export default async function EmployerDashboardPage(props: PageProps) {
                     return (
                       <div key={opp.id} className="p-4 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-neutral-300 dark:hover:border-neutral-800 transition-all">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-extrabold text-sm text-foreground">
                               <a href={getPublicUrl(opp)} target="_blank" rel="noopener noreferrer" className="hover:text-primary hover:underline transition-colors inline-flex items-center gap-1">
-                                <span>{opp.title}</span>
+                                <span className="line-clamp-2 break-words">{opp.title}</span>
                                 <ArrowUpRight className="w-3.5 h-3.5 text-muted shrink-0" />
                               </a>
                             </h3>
@@ -570,7 +589,7 @@ export default async function EmployerDashboardPage(props: PageProps) {
                         </div>
 
                         {/* Statistics Grid */}
-                        <div className="grid grid-cols-4 gap-4 text-center border-l border-r border-card-border px-4 py-1">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 text-center border-y sm:border-y-0 sm:border-l sm:border-r border-card-border py-2 sm:py-1 px-0 sm:px-4 w-full sm:w-auto">
                           <div className="space-y-0.5">
                             <p className="text-[9px] text-muted font-semibold flex items-center gap-0.5"><Eye className="w-3 h-3 text-primary" /> Views</p>
                             <p className="font-bold text-foreground text-xs">{stats.views}</p>
@@ -590,7 +609,7 @@ export default async function EmployerDashboardPage(props: PageProps) {
                         </div>
 
                         {/* Actions bar */}
-                        <div className="flex items-center gap-2 self-end md:self-auto">
+                        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto w-full sm:w-auto mt-2 sm:mt-0">
                           <Link 
                             href={`/dashboard/employer?tab=jobs-manager&editId=${opp.id}`}
                             className="px-2.5 py-1 rounded border border-card-border hover:bg-white/10 text-[10px] font-semibold text-foreground cursor-pointer"
@@ -650,7 +669,7 @@ export default async function EmployerDashboardPage(props: PageProps) {
               </div>
 
               {/* Grid cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <div className="glass-panel p-4 rounded-xl border border-card-border">
                   <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Profile Views</p>
                   <p className="text-2xl font-black text-foreground mt-1">456</p>

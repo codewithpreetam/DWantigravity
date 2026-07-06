@@ -13,7 +13,9 @@ import {
   getNotificationsAction, 
   markNotificationsReadAction 
 } from "@/app/actions/support";
-
+import { DashboardMobileNav } from "@/components/DashboardMobileNav";
+import UserManagement from "./components/UserManagement";
+import OpportunityManagement from "./components/OpportunityManagement";
 export const revalidate = 0;
 
 interface PageProps {
@@ -42,6 +44,9 @@ export default async function AdminDashboard(props: PageProps) {
   // Fetch counts
   const totalUsers = await db.user.count();
   const totalJobs = await db.job.count();
+  const totalEmployers = await db.user.count({ where: { role: UserRole.EMPLOYER } });
+  const totalSeekers = await db.user.count({ where: { role: UserRole.SEEKER } });
+  const totalApplications = await db.application.count();
 
   // Load chat & support details
   const initialMessages = await db.message.findMany();
@@ -73,37 +78,59 @@ export default async function AdminDashboard(props: PageProps) {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="glass-panel p-6 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-primary/10 text-primary rounded-lg"><Building className="w-6 h-6" /></div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="glass-panel p-4 md:p-6 rounded-xl flex items-center gap-4 border border-border">
+          <div className="p-3 bg-secondary/10 text-secondary rounded-lg"><Users className="w-5 h-5" /></div>
           <div>
-            <div className="text-2xl font-bold text-foreground">{pendingOrgs.length + approvedOrgs.length}</div>
-            <p className="text-xs text-muted font-medium">Registered NGO Partners</p>
+            <div className="text-xl md:text-2xl font-bold text-foreground">{totalUsers}</div>
+            <p className="text-xs text-muted font-medium">Total Users</p>
           </div>
         </div>
-        <div className="glass-panel p-6 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-secondary/10 text-secondary rounded-lg"><Users className="w-6 h-6" /></div>
+        <div className="glass-panel p-4 md:p-6 rounded-xl flex items-center gap-4 border border-border">
+          <div className="p-3 bg-primary/10 text-primary rounded-lg"><Building className="w-5 h-5" /></div>
           <div>
-            <div className="text-2xl font-bold text-foreground">{totalUsers}</div>
-            <p className="text-xs text-muted font-medium">Total Registered Users</p>
+            <div className="text-xl md:text-2xl font-bold text-foreground">{totalEmployers}</div>
+            <p className="text-xs text-muted font-medium">Employers</p>
           </div>
         </div>
-        <div className="glass-panel p-6 rounded-xl flex items-center gap-4">
-          <div className="p-3 bg-amber-500/10 text-amber-500 rounded-lg"><Briefcase className="w-6 h-6" /></div>
+        <div className="glass-panel p-4 md:p-6 rounded-xl flex items-center gap-4 border border-border">
+          <div className="p-3 bg-amber-500/10 text-amber-500 rounded-lg"><Briefcase className="w-5 h-5" /></div>
           <div>
-            <div className="text-2xl font-bold text-foreground">{totalJobs}</div>
-            <p className="text-xs text-muted font-medium">Total Opportunity Openings</p>
+            <div className="text-xl md:text-2xl font-bold text-foreground">{totalJobs}</div>
+            <p className="text-xs text-muted font-medium">Active Jobs</p>
+          </div>
+        </div>
+        <div className="glass-panel p-4 md:p-6 rounded-xl flex items-center gap-4 border border-border">
+          <div className="p-3 bg-green-500/10 text-green-500 rounded-lg"><Check className="w-5 h-5" /></div>
+          <div>
+            <div className="text-xl md:text-2xl font-bold text-foreground">{totalApplications}</div>
+            <p className="text-xs text-muted font-medium">Applications</p>
           </div>
         </div>
       </div>
 
+      {/* Mobile Nav */}
+      <DashboardMobileNav 
+        tabs={[
+          { id: "approvals", label: "NGO Verification", icon: <Building className="w-4 h-4 shrink-0" /> },
+          { id: "users", label: "Users", icon: <Users className="w-4 h-4 shrink-0" /> },
+          { id: "opportunities", label: "Opportunities", icon: <Briefcase className="w-4 h-4 shrink-0" /> },
+          { id: "listings", label: "Partner Directory", icon: <ShieldCheck className="w-4 h-4 shrink-0" /> },
+          { id: "support", label: "Support", icon: <Mail className="w-4 h-4 shrink-0" /> },
+        ]}
+        basePath="/dashboard/admin"
+        title="Admin CMS"
+      />
+
       {/* Content Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Navigation Sidebar */}
-        <div className="lg:col-span-3 space-y-2">
+        <div className="hidden lg:block lg:col-span-3 space-y-2">
           {[
-            { id: "approvals", label: "NGO Verification Requests", icon: Building },
-            { id: "listings", label: "Approved Partner Directory", icon: ShieldCheck },
+            { id: "approvals", label: "NGO Verification", icon: Building },
+            { id: "users", label: "User Management", icon: Users },
+            { id: "opportunities", label: "Opportunities", icon: Briefcase },
+            { id: "listings", label: "Partner Directory", icon: ShieldCheck },
             { id: "support", label: "Support Helpdesk", icon: Mail },
           ].map((item) => {
             const Icon = item.icon;
@@ -194,13 +221,13 @@ export default async function AdminDashboard(props: PageProps) {
               ) : (
                 <div className="space-y-4">
                   {approvedOrgs.map((org: any) => (
-                    <div key={org.id} className="p-4 rounded-xl border border-card-border bg-neutral-50/50 dark:bg-zinc-900/50 flex items-center justify-between gap-4">
-                      <div className="text-left">
-                        <h3 className="font-bold text-sm text-foreground flex items-center gap-1">
+                    <div key={org.id} className="p-4 rounded-xl border border-card-border bg-neutral-50/50 dark:bg-zinc-900/50 flex flex-col sm:flex-row sm:items-center justify-between items-start gap-4">
+                      <div className="text-left min-w-0">
+                        <h3 className="font-bold text-sm text-foreground flex flex-wrap items-center gap-1 break-words">
                           <span>{org.name}</span>
-                          <Check className="w-3.5 h-3.5 text-primary" />
+                          <Check className="w-3.5 h-3.5 text-primary shrink-0" />
                         </h3>
-                        <p className="text-[10px] text-muted">{org.website || "No website link"}</p>
+                        <p className="text-[10px] text-muted truncate">{org.website || "No website link"}</p>
                       </div>
 
                       <form
@@ -224,7 +251,23 @@ export default async function AdminDashboard(props: PageProps) {
             </div>
           )}
 
-          {/* TAB 3: Support Helpdesk */}
+          {/* TAB 3: Users */}
+          {tab === "users" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-foreground">User Management</h2>
+              <UserManagement />
+            </div>
+          )}
+
+          {/* TAB 4: Opportunities */}
+          {tab === "opportunities" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-foreground">Opportunity Management</h2>
+              <OpportunityManagement />
+            </div>
+          )}
+
+          {/* TAB 5: Support Helpdesk */}
           {tab === "support" && (
             <div className="space-y-6">
               <h2 className="text-xl font-bold text-foreground">Support Helpdesk Chatroom</h2>

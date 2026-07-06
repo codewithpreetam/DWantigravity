@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Mail, Phone, Send, MessageCircle } from "lucide-react";
+import { ContactForm } from "@/components/ContactForm";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -157,23 +158,7 @@ export default function ContactPage() {
       <section className="glass-panel rounded-2xl p-6 md:p-8 space-y-6">
         <h2 className="text-2xl font-bold">Contact Form</h2>
 
-        <form
-          className="space-y-4 text-sm"
-          onSubmit={(e) => {
-            e.preventDefault();
-            alert("Form submission not connected yet.");
-          }}
-        >
-          <input className="form-input" placeholder="Full Name" required />
-          <input className="form-input" placeholder="Email Address" type="email" required />
-          <input className="form-input" placeholder="Subject" required />
-          <textarea className="form-input min-h-32" placeholder="Message" required />
-
-          <button className="px-6 py-2.5 bg-primary text-white rounded-lg flex items-center gap-2">
-            <Send className="w-4 h-4" />
-            Send Message
-          </button>
-        </form>
+        <ContactForm />
       </section>
 
     </div>

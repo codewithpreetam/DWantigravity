@@ -37,14 +37,14 @@ export async function TopOrganizations() {
   // Calculate total active opportunities per org
   const orgsWithCounts = orgs.map((org: any) => {
     const activeCount =
-      org._count.jobs +
-      org._count.internships +
-      org._count.fellowships +
-      org._count.scholarships +
-      org._count.grants +
-      org._count.consultancies +
-      org._count.volunteers +
-      org._count.events;
+      (org._count?.jobs || 0) +
+      (org._count?.internships || 0) +
+      (org._count?.fellowships || 0) +
+      (org._count?.scholarships || 0) +
+      (org._count?.grants || 0) +
+      (org._count?.consultancies || 0) +
+      (org._count?.volunteers || 0) +
+      (org._count?.events || 0);
 
     return {
       ...org,

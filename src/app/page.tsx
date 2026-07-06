@@ -161,10 +161,10 @@ export default async function Home() {
   });
 
   return (
-    <div className="relative min-h-screen bg-gradient-glow pb-24">
+    <div className="relative min-h-screen bg-gradient-glow pb-24 overflow-x-hidden">
       {/* Background ambient blobs */}
-      <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl -z-10 animate-pulse" />
-      <div className="absolute top-40 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl -z-10" />
+      <div className="absolute top-20 left-1/4 w-64 md:w-96 h-64 md:h-96 bg-primary/10 rounded-full blur-3xl -z-10 animate-pulse" />
+      <div className="absolute top-40 right-1/4 w-64 md:w-96 h-64 md:h-96 bg-secondary/10 rounded-full blur-3xl -z-10" />
 
       {/* ── Hero ────────────────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12 text-center">
@@ -216,7 +216,7 @@ export default async function Home() {
 
       {/* ── Stats Bar ──────────────────────────────────────────────────── */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
