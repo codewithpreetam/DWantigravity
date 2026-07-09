@@ -100,37 +100,11 @@ export default function SupportChat({
       {/* Left side: Navigation / Inbox Toggles / Admin directory */}
       <div className="lg:col-span-4 space-y-4">
         
-        {/* Toggle support views */}
-        <div className="flex gap-2 p-1.5 glass-panel rounded-xl border border-card-border">
-          <button
-            onClick={() => setActiveTab("chat")}
-            className={`flex-1 py-2 text-center rounded-lg font-bold transition-all cursor-pointer ${
-              activeTab === "chat" 
-                ? "bg-primary text-white" 
-                : "text-muted hover:text-foreground"
-            }`}
-          >
+        {/* Header Title instead of Toggle */}
+        <div className="flex gap-2 p-3 glass-panel rounded-xl border border-card-border">
+          <div className="flex-1 py-1 text-center font-bold text-foreground">
             Support Inbox
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("notifications");
-              handleMarkNotificationsRead();
-            }}
-            className={`flex-1 py-2 text-center rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 relative cursor-pointer ${
-              activeTab === "notifications" 
-                ? "bg-primary text-white" 
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            <Bell className="w-4 h-4" />
-            <span>Alerts</span>
-            {unreadNotifsCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-red-500 text-white font-extrabold text-[8px] flex items-center justify-center animate-bounce">
-                {unreadNotifsCount}
-              </span>
-            )}
-          </button>
+          </div>
         </div>
 
         {/* Directory sidebar for admin conversation targets */}
@@ -297,45 +271,6 @@ export default function SupportChat({
                 <Send className="w-4 h-4" />
               </button>
             </form>
-          </div>
-        )}
-
-        {/* TAB 2: Notifications Alert Lists */}
-        {activeTab === "notifications" && (
-          <div className="glass-panel p-5 rounded-xl border border-card-border flex-1 flex flex-col">
-            <div className="mb-4">
-              <h3 className="font-bold text-foreground text-sm">System Alerts & Notifications</h3>
-              <p className="text-[10px] text-muted">A timeline of system messages, support replies, and job application counts.</p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto space-y-2 max-h-[50vh]">
-              {notifs.length === 0 ? (
-                <div className="text-center py-16 text-muted italic">No notifications found.</div>
-              ) : (
-                notifs.map((n) => (
-                  <div
-                    key={n.id}
-                    className={`p-3 rounded-lg border text-left transition-all relative ${
-                      n.read 
-                        ? "border-card-border bg-white/10 dark:bg-zinc-950/10 text-muted" 
-                        : "border-primary/30 bg-primary/5 text-foreground shadow-sm"
-                    }`}
-                  >
-                    {!n.read && (
-                      <div className="absolute top-3 right-3 w-1.5 h-1.5 rounded-full bg-primary animate-ping"></div>
-                    )}
-                    <div className="flex items-center gap-1.5 font-bold text-[11px]">
-                      <CheckCircle className={`w-3.5 h-3.5 ${n.read ? "text-muted" : "text-primary"}`} />
-                      <span>{n.title}</span>
-                    </div>
-                    <p className="text-[10px] mt-1 text-muted leading-relaxed">{n.message}</p>
-                    <span className="text-[8px] text-muted block mt-2 text-right">
-                      {new Date(n.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
           </div>
         )}
 

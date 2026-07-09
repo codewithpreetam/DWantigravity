@@ -3,6 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { Toaster } from "react-hot-toast";
+import { auth } from "@/auth";
+import { db } from "@/lib/db";
+import { SavedOpportunitiesProvider } from "@/components/SavedOpportunitiesProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,17 +42,46 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
+  const isLoggedIn = !!session?.user;
+  const userRole = session?.user?.role || null;
+  let savedIds: string[] = [];
+
+  if (isLoggedIn && session.user.id) {
+    const savedJobs = await db.savedJob.findMany({
+      where: { candidateId: session.user.id },
+      select: {
+        jobId: true,
+        internshipId: true,
+        fellowshipId: true,
+        scholarshipId: true,
+        grantId: true,
+        consultancyId: true,
+        volunteerId: true,
+        eventId: true,
+      },
+    });
+
+    savedIds = savedJobs.map((job: any) => 
+      job.jobId || job.internshipId || job.fellowshipId || job.scholarshipId || 
+      job.grantId || job.consultancyId || job.volunteerId || job.eventId
+    ).filter(Boolean) as string[];
+  }
+
   return (
-    <html lang="en" className="h-full overflow-x-hidden">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full flex flex-col overflow-x-hidden`}>
-        <Navbar />
-        <main className="flex-1 flex flex-col">{children}</main>
-        <Footer />
+    <html lang="en" className="h-full overflow-x-hidden" suppressHydrationWarning>
+      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full flex flex-col overflow-x-hidden`}>
+        <SavedOpportunitiesProvider initialSavedIds={savedIds} isLoggedIn={isLoggedIn} userRole={userRole}>
+          <Toaster position="bottom-right" />
+          <Navbar />
+          <main className="flex-1 flex flex-col">{children}</main>
+          <Footer />
+        </SavedOpportunitiesProvider>
       </body>
     </html>
   );

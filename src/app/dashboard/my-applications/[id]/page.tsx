@@ -210,7 +210,7 @@ export default async function ApplicationTrackingPage({ params, searchParams }: 
   if (activeStageIndex >= 6) {
     timelineEvents.push({
       title: "Interview Scheduled",
-      description: `Your interview was scheduled for ${app.interviewDate ? new Date(app.interviewDate).toLocaleDateString() : ""} at ${app.interviewTime || ""}.`,
+      description: `Your interview was scheduled for ${app.interviewDate ? new Date(app.interviewDate).toLocaleDateString("en-GB") : ""} at ${app.interviewTime || ""}.`,
       date: getStageDate(6),
       icon: "interview"
     });
@@ -348,8 +348,6 @@ export default async function ApplicationTrackingPage({ params, searchParams }: 
               { id: "applications", label: "My Applications", icon: Briefcase },
               { id: "saved", label: "Saved Opportunities", icon: Award, fallbackTab: "applications" },
               { id: "profile", label: "My Profile", icon: User },
-              { id: "resumes", label: "Resumes", icon: FileText, fallbackTab: "profile" },
-              { id: "cover-letters", label: "Cover Letters", icon: FileText, fallbackTab: "profile" },
               { id: "tickets", label: "Event Tickets", icon: Calendar },
               { id: "notifications", label: "Notifications", icon: Bell },
               { id: "settings", label: "Account Settings", icon: Settings, fallbackTab: "profile" },
@@ -447,7 +445,7 @@ export default async function ApplicationTrackingPage({ params, searchParams }: 
                       {orgName}
                     </span>
                     <span>•</span>
-                    <span>Applied on: {new Date(app.createdAt).toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    <span>Applied on: {new Date(app.createdAt).toLocaleDateString("en-GB")}</span>
                     <span>•</span>
                     <span>Application ID: DW-AP-{app.id.substring(0, 8).toUpperCase()}</span>
                   </div>
@@ -520,7 +518,7 @@ export default async function ApplicationTrackingPage({ params, searchParams }: 
                         </p>
                         {completed && stgDate && (
                           <p className="text-[9px] text-muted">
-                            {stgDate.toLocaleDateString("en-GB", { day: 'numeric', month: 'short' })}
+                            {stgDate.toLocaleDateString("en-GB")}
                           </p>
                         )}
                       </div>
@@ -528,7 +526,7 @@ export default async function ApplicationTrackingPage({ params, searchParams }: 
                       {/* Exact timestamp hover tooltip */}
                       {completed && stgDate && (
                         <div className="absolute bottom-full mb-2 bg-neutral-950 text-white text-[9px] px-2 py-1 rounded shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10 whitespace-nowrap">
-                          {stgDate.toLocaleDateString()} at {stgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {stgDate.toLocaleDateString("en-GB")} at {stgDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       )}
                     </div>
@@ -570,7 +568,7 @@ export default async function ApplicationTrackingPage({ params, searchParams }: 
                       <div className="flex justify-between items-baseline gap-2">
                         <h4 className="font-bold text-xs text-foreground">{ev.title}</h4>
                         <span className="text-[9px] text-muted whitespace-nowrap font-medium">
-                          {ev.date.toLocaleDateString("en-GB", { day: 'numeric', month: 'short' })} at {ev.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {ev.date.toLocaleDateString("en-GB")} at {ev.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <p className="text-[11px] text-muted leading-relaxed">{ev.description}</p>
@@ -598,7 +596,7 @@ export default async function ApplicationTrackingPage({ params, searchParams }: 
                       <div>
                         <p className="text-[10px] text-muted uppercase font-bold tracking-wide">Date</p>
                         <p className="font-semibold text-foreground">
-                          {new Date(app.interviewDate).toLocaleDateString("en-GB", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                          {new Date(app.interviewDate).toLocaleDateString("en-GB")}
                         </p>
                       </div>
 
@@ -817,7 +815,7 @@ export default async function ApplicationTrackingPage({ params, searchParams }: 
                         </div>
 
                         <div className="flex justify-between items-center pt-2 border-t border-card-border/40 text-[9px] text-muted">
-                          <span>Applied: {new Date(item.createdAt).toLocaleDateString()}</span>
+                          <span>Applied: {new Date(item.createdAt).toLocaleDateString("en-GB")}</span>
                           <Link 
                             href={`/dashboard/my-applications/${item.id}`} 
                             className="font-bold text-primary hover:underline flex items-center gap-0.5 cursor-pointer"

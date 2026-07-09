@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { Search, X, SlidersHorizontal, Filter as FilterIcon, ChevronDown, MapPin } from "lucide-react";
 
 export interface FilterConfig {
@@ -83,7 +84,12 @@ export default function FilterBar({
   const [, startTransition] = useTransition();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isSalaryOpen, setIsSalaryOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const salaryPopoverRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const buildUrl = useCallback((overrides: Record<string, string>) => {
     const p = new URLSearchParams(searchParams.toString());
@@ -345,9 +351,9 @@ export default function FilterBar({
 
       </div>
 
-      {salaryRange && isSalaryOpen && (
+      {salaryRange && isSalaryOpen && mounted && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-black/35" onClick={() => setIsSalaryOpen(false)} />
           <div className="absolute left-1/2 top-[24vh] -translate-x-1/2 w-[min(92vw,760px)]" ref={salaryPopoverRef}>
             <div className="rounded-2xl border-2 border-primary/80 bg-background shadow-2xl p-6 space-y-5">
               <div className="flex items-center justify-between gap-3">
@@ -420,7 +426,8 @@ export default function FilterBar({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Active filter chips */}
@@ -458,7 +465,7 @@ export default function FilterBar({
         </div>
       )}
 
-      {isDrawerOpen && (
+      {isDrawerOpen && mounted && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/45" onClick={() => setIsDrawerOpen(false)} />
           <aside className="absolute right-0 top-0 h-full w-full md:w-[420px] bg-background border-l border-card-border p-4 overflow-y-auto">
@@ -517,7 +524,8 @@ export default function FilterBar({
               </button>
             </div>
           </aside>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

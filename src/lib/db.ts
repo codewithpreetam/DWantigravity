@@ -43,7 +43,8 @@ if (!globalForDb.dbStore) {
     message: [],
     payment: [],
     savedJob: [],
-    savedSearch: []
+    savedSearch: [],
+    teamMember: []
   };
 }
 
@@ -235,7 +236,7 @@ export const db: any = new Proxy(prismaClient || {}, {
       "user", "organization", "job", "internship", "fellowship", 
       "scholarship", "grant", "consultancy", "volunteer", "application",
       "event", "registration", "blog", "category", "subscription",
-      "notification", "message", "payment", "savedJob", "savedSearch"
+      "notification", "message", "payment", "savedJob", "savedSearch", "teamMember"
     ].includes(prop)) {
       if (!isDatabaseConnected) {
         return createMockTable(prop);

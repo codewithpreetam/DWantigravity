@@ -94,7 +94,7 @@ export async function getOpportunitiesAction(
       createdAt: opp.createdAt,
       deadline: opp.deadline || opp.date || null,
       status: opp.status,
-      totalApplications: type !== "events" ? opp._count.applications : 0,
+      totalApplications: type !== "events" ? (opp._count?.applications || 0) : 0,
       totalViews: 0, // Currently no views field in DB
       totalSaves: 0, // Currently not aggregating saves
     };

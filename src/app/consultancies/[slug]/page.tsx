@@ -1,28 +1,65 @@
 import { db } from "@/lib/db";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Building, MapPin, IndianRupee } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Building, MapPin, IndianRupee, AlertCircle } from "lucide-react";
 import ApplyButton from "@/components/ApplyButton";
 import ShareButton from "@/components/ShareButton";
+import SaveButton from "@/components/SaveButton";
 import { auth } from "@/auth";
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export default async function ConsultancyDetailPage(props: Props) {
   const params = await props.params;
   const session = await auth();
   const user = session?.user;
-  const consultancy = await db.consultancy.findUnique({
-    where: { id: params.id },
+  let consultancy = await db.consultancy.findUnique({
+    where: { slug: params.slug },
   });
 
-  if (!consultancy) return notFound();
+  if (!consultancy) {
+    if (params.slug.length >= 25 && params.slug.startsWith("c")) {
+      consultancy = await db.consultancy.findUnique({
+        where: { id: params.slug },
+      });
+      if (consultancy) {
+        redirect(`/consultancies/${consultancy.slug}`);
+      }
+    }
+    return notFound();
+  }
 
   // Resolve relations
   const organization = await db.organization.findUnique({ where: { id: consultancy.organizationId } });
-  const postedBy = consultancy.postedById ? await db.user.findUnique({ where: { id: consultancy.postedById } }) : null;
+  
+  const teamMembers = consultancy.organizationId 
+    ? await db.teamMember.findMany({
+        where: { organizationId: consultancy.organizationId },
+        orderBy: { displayOrder: "asc" },
+        take: 3
+      })
+    : [];
+
+  const isSaved = user?.id
+    ? !!(await db.savedJob.findFirst({
+        where: { candidateId: user.id, consultancyId: consultancy.id },
+      }))
+    : false;
+
+  const alreadyApplied = user?.id ? await db.application.findFirst({
+    where: {
+      candidateId: user.id,
+      consultancyId: consultancy.id
+    }
+  }) : null;
+
+  const isPastDeadline = consultancy.deadline 
+    ? new Date() > new Date(new Date(consultancy.deadline).setUTCHours(23, 59, 59, 999)) 
+    : false;
+  const isActive = consultancy.isActive !== false; // Default to true if undefined
+  const isClosed = isPastDeadline || !isActive;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 flex-1 space-y-6 text-left">
@@ -63,32 +100,61 @@ export default async function ConsultancyDetailPage(props: Props) {
           </div>
         )}
 
-        {postedBy && (
+        {teamMembers.length > 0 && (
           <div className="border-t border-card-border pt-5 space-y-3">
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-primary">Opportunity Coordinator</h4>
-            <div className="flex items-center gap-3 p-3 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20 w-full sm:w-fit">
-              {postedBy.profilePhoto || postedBy.image ? (
-                <img src={postedBy.profilePhoto || postedBy.image || ""} alt="" className="w-10 h-10 rounded-full object-cover border border-card-border" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase">{postedBy.name?.substring(0,1)}</div>
-              )}
-              <div>
-                <p className="font-bold text-xs text-foreground leading-none">{postedBy.name}</p>
-                <p className="text-[9px] text-muted mt-1 leading-none">{postedBy.jobTitle || "Recruiter"} &middot; {organization?.name}</p>
-                <Link href={`/recruiter/${postedBy.id}`} className="text-[9px] font-bold text-primary hover:underline block mt-1 leading-none">View Profile &rarr;</Link>
-              </div>
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-primary">Meet the Recruitment Team</h4>
+            <div className="flex flex-wrap gap-3">
+              {teamMembers.map((member: any) => (
+                <div key={member.id} className="flex items-center gap-3 p-3 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20 w-full sm:w-fit">
+                  {member.profilePhoto ? (
+                    <img
+                      src={member.profilePhoto}
+                      alt={member.fullName}
+                      className="w-10 h-10 rounded-full object-cover border border-card-border"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                      {member.fullName?.substring(0, 1)}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-xs text-foreground leading-none">{member.fullName}</p>
+                    <p className="text-[9px] text-muted mt-1 leading-none">{member.designation}</p>
+                  </div>
+                </div>
+              ))}
             </div>
+            {organization && (
+              <Link
+                href={`/${organization.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
+                className="text-[9px] font-bold text-primary hover:underline block mt-2"
+              >
+                View Full Team Directory &rarr;
+              </Link>
+            )}
           </div>
         )}
 
         <div className="border-t border-card-border pt-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
           <span className="text-xs text-muted break-all">{user ? `Applying as ${user.email}` : "Login required to apply"}</span>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
+            <SaveButton
+              opportunityId={consultancy.id}
+              opportunityType="CONSULTANCY"
+              initialSaved={isSaved}
+              isLoggedIn={!!user}
+              userRole={user?.role}
+            />
             <ShareButton label="Share Consultancy" />
-            {user ? (
-              <ApplyButton opportunityId={consultancy.id} opportunityTitle={consultancy.title} opportunityType="CONSULTANCY" userEmail={user.email || undefined} label="Apply Now" />
+            {isClosed ? (
+              <div className="px-6 py-2.5 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all w-full sm:w-auto">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                <span>Applications Closed</span>
+              </div>
+            ) : user ? (
+              <ApplyButton opportunityId={consultancy.id} opportunityTitle={consultancy.title} opportunityType="CONSULTANCY" userEmail={user.email || undefined} label="Apply Now" alreadyApplied={!!alreadyApplied} />
             ) : (
-              <Link href={`/auth/signin?callbackUrl=/consultancies/${consultancy.id}`} className="px-5 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg w-full sm:w-auto text-center">Login to Apply</Link>
+              <Link href={`/auth/signin?callbackUrl=/consultancies/${consultancy.slug}`} className="px-5 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg w-full sm:w-auto text-center">Login to Apply</Link>
             )}
           </div>
         </div>

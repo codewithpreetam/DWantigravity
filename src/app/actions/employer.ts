@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { ApplicationStage } from "@prisma/client";
+import { generateUniqueSlug } from "@/lib/slug";
 
 async function getRecruiterId(): Promise<string | null> {
   const session = await auth();
@@ -36,9 +37,10 @@ export async function createJobAction(formData: FormData): Promise<void> {
   const employmentType = (formData.get("employmentType") as string) || "FULL_TIME";
   const workMode = (formData.get("workMode") as string) || "ON_SITE";
   const isRemote = workMode === "REMOTE";
+  const deadlineStr = formData.get("deadline") as string;
   const organizationId = formData.get("organizationId") as string;
 
-  if (!title || !description || !location || !organizationId) {
+  if (!title || !description || !location || !organizationId || !deadlineStr) {
     return;
   }
 
@@ -46,6 +48,7 @@ export async function createJobAction(formData: FormData): Promise<void> {
     const matching = parseMatchingParams(formData);
     await db.job.create({
       data: {
+        slug: await generateUniqueSlug(title),
         title,
         description,
         requirements,
@@ -55,6 +58,7 @@ export async function createJobAction(formData: FormData): Promise<void> {
         employmentType,
         isRemote,
         workMode,
+        deadline: new Date(deadlineStr),
         postedById: await getRecruiterId(),
         organizationId,
         isActive: true,
@@ -76,9 +80,10 @@ export async function createInternshipAction(formData: FormData): Promise<void> 
   const location = formData.get("location") as string;
   const stipend = parseInt(formData.get("stipend") as string) || 0;
   const duration = formData.get("duration") as string;
+  const deadlineStr = formData.get("deadline") as string;
   const organizationId = formData.get("organizationId") as string;
 
-  if (!title || !description || !location || !organizationId) {
+  if (!title || !description || !location || !organizationId || !deadlineStr) {
     return;
   }
 
@@ -86,12 +91,14 @@ export async function createInternshipAction(formData: FormData): Promise<void> 
     const matching = parseMatchingParams(formData);
     await db.internship.create({
       data: {
+        slug: await generateUniqueSlug(title),
         title,
         description,
         requirements,
         location,
         stipend,
         duration,
+        deadline: new Date(deadlineStr),
         postedById: await getRecruiterId(),
         organizationId,
         isActive: true,
@@ -112,9 +119,10 @@ export async function createFellowshipAction(formData: FormData): Promise<void> 
   const location = formData.get("location") as string;
   const stipend = parseInt(formData.get("stipend") as string) || 0;
   const duration = formData.get("duration") as string;
+  const deadlineStr = formData.get("deadline") as string;
   const organizationId = formData.get("organizationId") as string;
 
-  if (!title || !description || !location || !organizationId) {
+  if (!title || !description || !location || !organizationId || !deadlineStr) {
     return;
   }
 
@@ -122,12 +130,14 @@ export async function createFellowshipAction(formData: FormData): Promise<void> 
     const matching = parseMatchingParams(formData);
     await db.fellowship.create({
       data: {
+        slug: await generateUniqueSlug(title),
         title,
         description,
         requirements,
         location,
         stipend,
         duration,
+        deadline: new Date(deadlineStr),
         postedById: await getRecruiterId(),
         organizationId,
         isActive: true,
@@ -157,6 +167,7 @@ export async function createScholarshipAction(formData: FormData): Promise<void>
     const matching = parseMatchingParams(formData);
     await db.scholarship.create({
       data: {
+        slug: await generateUniqueSlug(title),
         title,
         description,
         requirements,
@@ -192,6 +203,7 @@ export async function createGrantAction(formData: FormData): Promise<void> {
     const matching = parseMatchingParams(formData);
     await db.grant.create({
       data: {
+        slug: await generateUniqueSlug(title),
         title,
         description,
         requirements,
@@ -218,9 +230,10 @@ export async function createConsultancyAction(formData: FormData): Promise<void>
   const requirements = formData.get("requirements") as string;
   const location = formData.get("location") as string;
   const budget = parseInt(formData.get("budget") as string) || 0;
+  const deadlineStr = formData.get("deadline") as string;
   const organizationId = formData.get("organizationId") as string;
 
-  if (!title || !description || !location || !organizationId) {
+  if (!title || !description || !location || !organizationId || !deadlineStr) {
     return;
   }
 
@@ -228,11 +241,13 @@ export async function createConsultancyAction(formData: FormData): Promise<void>
     const matching = parseMatchingParams(formData);
     await db.consultancy.create({
       data: {
+        slug: await generateUniqueSlug(title),
         title,
         description,
         requirements,
         location,
         budget,
+        deadline: new Date(deadlineStr),
         postedById: await getRecruiterId(),
         organizationId,
         isActive: true,
@@ -252,9 +267,10 @@ export async function createVolunteerAction(formData: FormData): Promise<void> {
   const requirements = formData.get("requirements") as string;
   const location = formData.get("location") as string;
   const duration = formData.get("duration") as string;
+  const deadlineStr = formData.get("deadline") as string;
   const organizationId = formData.get("organizationId") as string;
 
-  if (!title || !description || !location || !organizationId) {
+  if (!title || !description || !location || !organizationId || !deadlineStr) {
     return;
   }
 
@@ -262,11 +278,13 @@ export async function createVolunteerAction(formData: FormData): Promise<void> {
     const matching = parseMatchingParams(formData);
     await db.volunteer.create({
       data: {
+        slug: await generateUniqueSlug(title),
         title,
         description,
         requirements,
         location,
         duration,
+        deadline: new Date(deadlineStr),
         postedById: await getRecruiterId(),
         organizationId,
         isActive: true,
@@ -305,6 +323,12 @@ export async function createEventAction(formData: FormData): Promise<void> {
   const state = formData.get("state") as string | null;
   const country = formData.get("country") as string | null;
   const meetingPlatform = formData.get("meetingPlatform") as string | null;
+  const endTime = formData.get("endTime") as string | null;
+  const meetingLink = formData.get("meetingLink") as string | null;
+  const meetingPassword = formData.get("meetingPassword") as string | null;
+  const joiningInstructions = formData.get("joiningInstructions") as string | null;
+  const contactPerson = formData.get("contactPerson") as string | null;
+  const joinButtonVisibility = formData.get("joinButtonVisibility") as string | null || "IMMEDIATE";
   
   const certificateAvailable = formData.get("certificateAvailable") === "true";
   const recordingAvailable = formData.get("recordingAvailable") === "true";
@@ -319,15 +343,11 @@ export async function createEventAction(formData: FormData): Promise<void> {
     return;
   }
 
-  // Generate a unique slug: slugify title + random string
-  const baseSlug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 8)}`;
-
   try {
     const matching = parseMatchingParams(formData);
     await db.event.create({
       data: {
-        slug,
+        slug: await generateUniqueSlug(title),
         title,
         description,
         coverImage,
@@ -342,6 +362,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
         categoryId,
         tags,
         audience,
+        isActive: true,
         eligibility,
         contactEmail,
         contactPhone,
@@ -353,8 +374,15 @@ export async function createEventAction(formData: FormData): Promise<void> {
         state,
         country,
         meetingPlatform,
+        endTime,
+        meetingLink,
+        meetingPassword,
+        joiningInstructions,
+        contactPerson,
+        joinButtonVisibility,
         certificateAvailable,
         recordingAvailable,
+        customQuestions: formData.get("customQuestions") ? JSON.parse(formData.get("customQuestions") as string) : [],
         postedById: await getRecruiterId(),
         organizerId,
         ...matching
@@ -531,50 +559,71 @@ export async function updateOrgProfileRichAction(formData: FormData): Promise<{ 
   }
 }
 
-export async function inviteRecruiterAction(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+export async function addTeamMemberAction(formData: FormData): Promise<{ success?: boolean; error?: string }> {
   const orgId = formData.get("orgId") as string;
-  const email = formData.get("email") as string;
-  const name = formData.get("name") as string;
-  const roleInOrg = formData.get("roleInOrg") as string; // Owner, Admin, Recruiter, Viewer
-
-  if (!orgId || !email || !name) {
-    return { error: "Organization, name, and email are required." };
+  const fullName = formData.get("fullName") as string;
+  const designation = formData.get("designation") as string;
+  
+  if (!orgId || !fullName || !designation) {
+    return { error: "Organization ID, Full Name, and Designation are required." };
   }
 
   try {
-    // Check if user exists
-    const existing = await db.user.findUnique({ where: { email } });
-    if (existing) {
-      if (existing.organizationId) {
-        return { error: "User is already registered with an organization." };
+    await db.teamMember.create({
+      data: {
+        organizationId: orgId,
+        fullName,
+        designation,
+        email: (formData.get("email") as string) || null,
+        phone: (formData.get("phone") as string) || null,
+        linkedinUrl: (formData.get("linkedinUrl") as string) || null,
+        bio: (formData.get("bio") as string) || null,
+        profilePhoto: (formData.get("profilePhoto") as string) || null,
+        displayOrder: parseInt((formData.get("displayOrder") as string) || "0", 10),
       }
-      // Associate existing user
-      await db.user.update({
-        where: { id: existing.id },
-        data: { organizationId: orgId, roleInOrg }
-      });
-    } else {
-      // Mock create a pending recruiter user
-      await db.user.create({
-        data: {
-          name,
-          email,
-          role: "EMPLOYER",
-          organizationId: orgId,
-          roleInOrg,
-        }
-      });
-    }
+    });
 
     revalidatePath("/dashboard/employer");
     return { success: true };
   } catch (err: any) {
-    console.error("Invite error:", err);
+    console.error("Error adding team member:", err);
     return { error: err.message };
   }
 }
 
-export async function removeRecruiterMemberAction(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+export async function updateTeamMemberAction(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const memberId = formData.get("memberId") as string;
+  const fullName = formData.get("fullName") as string;
+  const designation = formData.get("designation") as string;
+  
+  if (!memberId || !fullName || !designation) {
+    return { error: "Member ID, Full Name, and Designation are required." };
+  }
+
+  try {
+    await db.teamMember.update({
+      where: { id: memberId },
+      data: {
+        fullName,
+        designation,
+        email: (formData.get("email") as string) || null,
+        phone: (formData.get("phone") as string) || null,
+        linkedinUrl: (formData.get("linkedinUrl") as string) || null,
+        bio: (formData.get("bio") as string) || null,
+        profilePhoto: (formData.get("profilePhoto") as string) || null,
+        displayOrder: parseInt((formData.get("displayOrder") as string) || "0", 10),
+      }
+    });
+
+    revalidatePath("/dashboard/employer");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error updating team member:", err);
+    return { error: err.message };
+  }
+}
+
+export async function deleteTeamMemberAction(formData: FormData): Promise<{ success?: boolean; error?: string }> {
   const memberId = formData.get("memberId") as string;
 
   if (!memberId) {
@@ -582,18 +631,33 @@ export async function removeRecruiterMemberAction(formData: FormData): Promise<{
   }
 
   try {
-    await db.user.update({
+    await db.teamMember.delete({
       where: { id: memberId },
-      data: { 
-        organizationId: null,
-        roleInOrg: null
-      }
     });
 
     revalidatePath("/dashboard/employer");
     return { success: true };
   } catch (err: any) {
-    console.error("Error removing member:", err);
+    console.error("Error deleting member:", err);
+    return { error: err.message };
+  }
+}
+
+export async function reorderTeamMembersAction(orderedIds: string[]): Promise<{ success?: boolean; error?: string }> {
+  try {
+    // We execute updates sequentially or in a transaction.
+    // For simplicity, updating them in a loop.
+    for (let i = 0; i < orderedIds.length; i++) {
+      await db.teamMember.update({
+        where: { id: orderedIds[i] },
+        data: { displayOrder: i },
+      });
+    }
+    
+    revalidatePath("/dashboard/employer");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error reordering members:", err);
     return { error: err.message };
   }
 }
@@ -730,6 +794,13 @@ export async function updateOpportunityAction(formData: FormData): Promise<{ suc
     const matching = parseMatchingParams(formData);
     const data: any = { title, description, requirements, ...matching };
 
+    if (oppType !== "EVENT") {
+      const deadlineStr = formData.get("deadline") as string;
+      if (deadlineStr) {
+        data.deadline = new Date(deadlineStr);
+      }
+    }
+
     if (oppType === "JOB") {
       data.location = formData.get("location") as string;
       data.salaryMin = parseInt(formData.get("salaryMin") as string) || undefined;
@@ -743,13 +814,9 @@ export async function updateOpportunityAction(formData: FormData): Promise<{ suc
       data.duration = formData.get("duration") as string;
     } else if (oppType === "SCHOLARSHIP") {
       data.amount = parseInt(formData.get("amount") as string) || undefined;
-      const deadline = formData.get("deadline") as string;
-      data.deadline = deadline ? new Date(deadline) : undefined;
     } else if (oppType === "GRANT") {
       data.fundingMin = parseInt(formData.get("fundingMin") as string) || undefined;
       data.fundingMax = parseInt(formData.get("fundingMax") as string) || undefined;
-      const deadline = formData.get("deadline") as string;
-      data.deadline = deadline ? new Date(deadline) : undefined;
       data.externalApplyLink = (formData.get("externalApplyLink") as string) || null;
     } else if (oppType === "CONSULTANCY") {
       data.location = formData.get("location") as string;
@@ -762,8 +829,17 @@ export async function updateOpportunityAction(formData: FormData): Promise<{ suc
       const dateStr = formData.get("date") as string;
       data.date = dateStr ? new Date(dateStr) : undefined;
       data.time = formData.get("time") as string;
+      data.endTime = formData.get("endTime") as string | null;
       data.capacity = parseInt(formData.get("capacity") as string) || undefined;
       data.price = parseInt(formData.get("price") as string) || undefined;
+      data.meetingLink = formData.get("meetingLink") as string | null;
+      data.meetingPassword = formData.get("meetingPassword") as string | null;
+      data.joiningInstructions = formData.get("joiningInstructions") as string | null;
+      data.contactPerson = formData.get("contactPerson") as string | null;
+      data.joinButtonVisibility = formData.get("joinButtonVisibility") as string | null || "IMMEDIATE";
+      if (formData.has("customQuestions")) {
+        data.customQuestions = JSON.parse(formData.get("customQuestions") as string);
+      }
     }
 
     await model.update({
@@ -776,6 +852,22 @@ export async function updateOpportunityAction(formData: FormData): Promise<{ suc
     return { success: true };
   } catch (err: any) {
     console.error("Update error:", err);
+    return { error: err.message };
+  }
+}
+
+export async function updateRegistrationStatusAction(
+  registrationId: string,
+  status: string
+): Promise<{ success?: boolean; error?: string }> {
+  try {
+    await db.registration.update({
+      where: { id: registrationId },
+      data: { status }
+    });
+    return { success: true };
+  } catch (err: any) {
+    console.error("Registration status update error:", err);
     return { error: err.message };
   }
 }

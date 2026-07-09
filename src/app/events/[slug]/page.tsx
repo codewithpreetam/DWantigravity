@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { 
   ArrowLeft, Building, MapPin, Calendar, Clock, 
@@ -7,7 +7,9 @@ import {
   ArrowUpRight, Target, GraduationCap
 } from "lucide-react";
 import ApplyButton from "@/components/ApplyButton";
+import EventRegisterButton from "@/components/EventRegisterButton";
 import ShareButton from "@/components/ShareButton";
+import SaveButton from "@/components/SaveButton";
 import { auth } from "@/auth";
 import type { Metadata } from "next";
 
@@ -19,7 +21,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params;
   const event = await db.event.findUnique({
     where: { slug: params.slug },
-    include: { organizer: true }
+    include: { 
+      organizer: true,
+      _count: {
+        select: { registrations: true }
+      }
+    }
   });
 
   if (!event) {
@@ -45,15 +52,46 @@ export default async function EventDetailPage(props: Props) {
   const session = await auth();
   const user = session?.user;
 
-  const event = await db.event.findUnique({
-    where: { slug: params.slug },
+  const event = await db.event.findFirst({
+    where: { 
+      OR: [
+        { slug: params.slug },
+        { id: params.slug }
+      ]
+    },
     include: { 
       organizer: true,
       postedBy: true,
+      _count: {
+        select: { registrations: { where: { status: { in: ["REGISTERED", "APPROVED"] } } } }
+      }
     },
   });
 
   if (!event) return notFound();
+
+  // Redirect to canonical slug if accessed via ID
+  if (event.slug !== params.slug) {
+    redirect(`/events/${event.slug}`);
+  }
+
+  const teamMembers = event.organizerId 
+    ? await db.teamMember.findMany({
+        where: { organizationId: event.organizerId },
+        orderBy: { displayOrder: "asc" },
+        take: 3
+      })
+    : [];
+
+  const isSaved = user?.id
+    ? !!(await db.savedJob.findFirst({
+        where: { candidateId: user.id, eventId: event.id },
+      }))
+    : false;
+
+  const userRegistration = user ? await db.registration.findUnique({
+    where: { eventId_userId: { eventId: event.id, userId: user.id } }
+  }) : null;
 
   // Find related events (same category or format, excluding current)
   const relatedEvents = await db.event.findMany({
@@ -70,9 +108,16 @@ export default async function EventDetailPage(props: Props) {
     include: { organizer: true }
   });
 
-  const isWebinar = event.format === "WEBINAR";
+  const isWebinar = event.format === "WEBINAR" || event.format === "ONLINE";
   const isHybrid = event.format === "HYBRID";
-  const isRegistrationClosed = event.registrationDeadline && new Date() > new Date(event.registrationDeadline);
+  
+  const isPastDeadline = event.registrationDeadline 
+    ? new Date() > new Date(new Date(event.registrationDeadline).setUTCHours(23, 59, 59, 999)) 
+    : false;
+    
+  const isSoldOut = event.capacity ? (event._count?.registrations ?? 0) >= event.capacity : false;
+  const isActive = event.isActive !== false; // Default to true if undefined
+  const isRegistrationClosed = isPastDeadline || isSoldOut || !isActive;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
@@ -148,12 +193,19 @@ export default async function EventDetailPage(props: Props) {
                     <Building className="w-4 h-4" /> {event.organizer.name}
                   </span>
                 )}
-                <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {event.date ? new Date(event.date).toLocaleDateString("en-IN", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : "TBA"}</span>
+                <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {event.date ? new Date(event.date).toLocaleDateString("en-GB") : "TBA"}</span>
                 {event.location && <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {event.location}</span>}
               </div>
             </div>
             
-            <div className="w-full md:w-auto">
+            <div className="w-full md:w-auto flex items-center gap-2">
+              <SaveButton
+                opportunityId={event.id}
+                opportunityType="EVENT"
+                initialSaved={isSaved}
+                isLoggedIn={!!user}
+                userRole={user?.role}
+              />
               <ShareButton label="Share Event" className="h-10 px-4" />
             </div>
           </div>
@@ -203,6 +255,42 @@ export default async function EventDetailPage(props: Props) {
             </section>
           )}
 
+          {/* Meet Our Team */}
+          {teamMembers.length > 0 && (
+            <section className="glass-panel p-6 md:p-8 rounded-2xl border border-card-border text-left space-y-4">
+              <h2 className="text-sm font-bold text-foreground flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Meet the Event Team</h2>
+              <div className="flex flex-wrap gap-3">
+                {teamMembers.map((member: any) => (
+                  <div key={member.id} className="flex items-center gap-3 p-3 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20 w-full sm:w-fit">
+                    {member.profilePhoto ? (
+                      <img
+                        src={member.profilePhoto}
+                        alt={member.fullName}
+                        className="w-10 h-10 rounded-full object-cover border border-card-border"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                        {member.fullName?.substring(0, 1)}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-bold text-xs text-foreground leading-none">{member.fullName}</p>
+                      <p className="text-[9px] text-muted mt-1 leading-none">{member.designation}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {event.organizer && (
+                <Link
+                  href={`/${event.organizer.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
+                  className="text-[10px] font-bold text-primary hover:underline block mt-2"
+                >
+                  View Full Team Directory &rarr;
+                </Link>
+              )}
+            </section>
+          )}
+
         </div>
 
         {/* Sidebar Column */}
@@ -216,7 +304,7 @@ export default async function EventDetailPage(props: Props) {
               {event.registrationDeadline && (
                 <div className="flex justify-between border-b border-card-border pb-3">
                   <span>Deadline</span>
-                  <span className="text-foreground">{new Date(event.registrationDeadline).toLocaleDateString()}</span>
+                  <span className="text-foreground">{new Date(event.registrationDeadline).toLocaleDateString("en-GB")}</span>
                 </div>
               )}
               {event.capacity && (
@@ -234,12 +322,41 @@ export default async function EventDetailPage(props: Props) {
             </div>
 
             <div className="pt-2">
-              {isRegistrationClosed ? (
+              {userRegistration && userRegistration.status !== "CANCELLED" ? (
+                <Link href="/dashboard/candidate?tab=tickets" className="block w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl text-center transition-colors shadow">
+                  You are registered (Go to Dashboard)
+                </Link>
+              ) : isRegistrationClosed ? (
                 <div className="w-full py-3 bg-neutral-200 dark:bg-neutral-800 text-muted text-sm font-bold rounded-xl text-center cursor-not-allowed">
-                  Registration Closed
+                  {isSoldOut ? "Sold Out" : "Registration Closed"}
                 </div>
               ) : user ? (
-                <ApplyButton opportunityId={event.id} opportunityTitle={event.title} opportunityType="EVENT" userEmail={user.email || undefined} label="Register Now" />
+                <EventRegisterButton 
+                  eventId={event.id} 
+                  eventTitle={event.title} 
+                  eventDate={event.date?.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                  eventLocation={event.format === "ONLINE" ? "Online / Virtual" : (event.venue ? `${event.venue}, ${event.city}` : "TBD")}
+                  userEmail={user.email || undefined} 
+                  userName={user.name || undefined}
+                  userRole={user.role}
+                  customQuestions={
+                    (function parseQs(qs: any) {
+                      if (!qs) return [];
+                      if (Array.isArray(qs)) return qs;
+                      if (typeof qs === "string") {
+                        try {
+                          const p = JSON.parse(qs);
+                          return Array.isArray(p) ? p : [];
+                        } catch {
+                          return [];
+                        }
+                      }
+                      return [];
+                    })(event.customQuestions)
+                  }
+                  isClosed={isRegistrationClosed}
+                  alreadyRegistered={!!userRegistration && userRegistration.status !== "CANCELLED"}
+                />
               ) : (
                 <Link href={`/auth/signin?callbackUrl=/events/${event.slug}`} className="block w-full py-3 bg-primary hover:bg-primary-hover text-white text-sm font-bold rounded-xl text-center transition-colors shadow">
                   Login to Register
@@ -254,7 +371,7 @@ export default async function EventDetailPage(props: Props) {
             <div className="space-y-3 text-xs text-muted">
               <div className="flex gap-2">
                 <Calendar className="w-4 h-4 text-primary shrink-0" />
-                <span>{event.date ? new Date(event.date).toLocaleDateString() : "TBA"}</span>
+                <span>{event.date ? new Date(event.date).toLocaleDateString("en-GB") : "TBA"}</span>
               </div>
               {(event.time || event.timeZone) && (
                 <div className="flex gap-2">
@@ -349,7 +466,7 @@ export default async function EventDetailPage(props: Props) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">{item.title}</h3>
-                  <p className="text-[10px] text-muted flex items-center gap-1 mt-1.5"><Calendar className="w-3 h-3" /> {new Date(item.date).toLocaleDateString()}</p>
+                  <p className="text-[10px] text-muted flex items-center gap-1 mt-1.5"><Calendar className="w-3 h-3" /> {new Date(item.date).toLocaleDateString("en-GB")}</p>
                 </div>
               </Link>
             ))}

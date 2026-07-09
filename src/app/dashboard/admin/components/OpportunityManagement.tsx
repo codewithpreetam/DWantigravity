@@ -105,7 +105,7 @@ export default function OpportunityManagement() {
         Status: o.status,
         Organization: o.organization || "N/A",
         Recruiter: o.recruiter,
-        "Posted Date": format(new Date(o.createdAt), "PPP"),
+        "Posted Date": o.createdAt ? format(new Date(o.createdAt), "PPP") : "N/A",
         "Deadline / Event Date": o.deadline ? format(new Date(o.deadline), "PPP") : "N/A",
         "Total Applications": o.totalApplications
       }));
@@ -256,7 +256,7 @@ export default function OpportunityManagement() {
                       </span>
                     </td>
                     <td className="p-4 text-sm">
-                      <div className="text-muted-foreground">Posted: {format(new Date(opp.createdAt), "MMM d, yy")}</div>
+                      <div className="text-muted-foreground">Posted: {opp.createdAt ? format(new Date(opp.createdAt), "MMM d, yy") : "N/A"}</div>
                       {opp.deadline && (
                         <div className="font-medium text-foreground mt-0.5">
                           {typeFilter === 'events' ? 'Date: ' : 'Deadline: '} {format(new Date(opp.deadline), "MMM d, yy")}

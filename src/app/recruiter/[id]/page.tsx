@@ -165,7 +165,7 @@ export default async function RecruiterProfilePage(props: Props) {
                   <div className="flex items-center gap-3 text-[10px] text-muted mt-1 font-semibold">
                     <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {opp.location}</span>
                     <span>&middot;</span>
-                    <span>Posted {new Date(opp.createdAt).toLocaleDateString()}</span>
+                    <span>Posted {new Date(opp.createdAt).toLocaleDateString("en-GB")}</span>
                   </div>
                 </div>
 

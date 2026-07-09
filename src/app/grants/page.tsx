@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { Landmark, Building, IndianRupee, Calendar, ArrowUpRight, Award } from "lucide-react";
 import FilterBar, { FilterConfig } from "@/components/FilterBar";
 import { getGrantFilterOptions } from "@/lib/filterOptions";
 import { Pagination } from "@/components/Pagination";
+import OpportunityCard from "@/components/OpportunityCard";
+import EmptyState from "@/components/EmptyState";
+import { Landmark } from "lucide-react";
 
 export const revalidate = 0;
 
@@ -74,48 +76,32 @@ export default async function GrantsPage(props: PageProps) {
         </div>
 
         {paginatedGrants.length === 0 ? (
-          <div className="glass-panel p-12 text-center rounded-xl flex-1 flex flex-col justify-center items-center">
-            <Landmark className="w-12 h-12 text-muted mb-4" />
-            <h3 className="text-lg font-bold text-foreground">No Grants Available</h3>
-            <p className="text-xs text-muted max-w-xs mt-1">Try broadening your search or removing filters.</p>
-          </div>
+          <EmptyState 
+            title="No Grants Available"
+            description="Try broadening your search or removing some filters to see more results."
+            icon={<Landmark className="w-12 h-12 text-muted mx-auto" />}
+            clearFiltersHref="/grants"
+          />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {paginatedGrants.map((item: any) => {
-              const params = new URLSearchParams();
-              if (q) params.set("q", q);
-              if (funding) params.set("funding", funding);
-              if (skill) params.set("skill", skill);
-              if (minEdu) params.set("minEdu", minEdu);
-              return (
-                <Link key={item.id} href={`/grants/${item.id}?${params.toString()}`}
-                  className="block glass-panel p-5 rounded-xl border text-left transition-all hover:border-primary/40 hover:-translate-y-0.5">
-                  <div className="flex items-center gap-2 mb-3">
-                    {item.organization?.logo ? (
-                      <img src={item.organization.logo} alt={item.organization.name || ""} className="w-8 h-8 object-contain rounded border border-card-border bg-white p-0.5 shrink-0" />
-                    ) : (
-                      <div className="w-8 h-8 rounded border border-card-border bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">{(item.organization?.name || "?").charAt(0)}</div>
-                    )}
-                    <span className="text-xs text-muted font-medium truncate">{item.organization?.name}</span>
-                  </div>
-                  <div className="flex justify-between items-start gap-2">
-                    <h3 className="font-bold text-sm text-foreground line-clamp-2">{item.title}</h3>
-                    <Award className="w-4 h-4 text-primary shrink-0" />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted mt-3">
-                    {item.amount && <span className="flex items-center gap-1"><IndianRupee className="w-3 h-3" /> Up to ₹{(item.amount / 100000).toFixed(1)}L</span>}
-                    {item.deadline && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(item.deadline).toLocaleDateString()}</span>}
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-card-border flex items-center justify-end text-xs">
-                    <span className="inline-flex items-center gap-1 text-primary font-semibold">View Details <ArrowUpRight className="w-3.5 h-3.5" /></span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              {paginatedGrants.map((item: any) => {
+                const params = new URLSearchParams();
+                if (q) params.set("q", q);
+                if (funding) params.set("funding", funding);
+                if (skill) params.set("skill", skill);
+                if (minEdu) params.set("minEdu", minEdu);
+                
+                const href = `/grants/${item.slug}?${params.toString()}`;
+                
+                return (
+                  <OpportunityCard key={item.id} item={item} type="GRANT" href={href} />
+                );
+              })}
+            </div>
+            {totalPages > 1 && <Pagination currentPage={page} totalPages={totalPages} />}
+          </>
         )}
-        
-        <Pagination currentPage={page} totalPages={totalPages} />
       </div>
     </div>
   );

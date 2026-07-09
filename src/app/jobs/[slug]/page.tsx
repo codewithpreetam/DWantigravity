@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
 import { auth } from "@/auth";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowUpRight,
   Briefcase,
@@ -13,10 +14,11 @@ import {
 } from "lucide-react";
 import ApplyButton from "@/components/ApplyButton";
 import ShareButton from "@/components/ShareButton";
+import SaveButton from "@/components/SaveButton";
 import type { Metadata } from "next";
 
 interface Props {
-  params: Promise<{ orgSlug: string; jobSlug: string }>;
+  params: Promise<{ slug: string }>;
   searchParams: Promise<{
     q?: string;
     workMode?: string;
@@ -43,16 +45,6 @@ function stripHtml(text: string): string {
   return text.replace(/<[^>]*>?/gm, "");
 }
 
-async function findJobBySlugs(allJobs: any[], orgSlug: string, jobSlug: string) {
-  return allJobs.find((job: any) => {
-    const calculatedOrgSlug = slugify(job.organization?.name || "");
-    const calculatedJobSlug = slugify(
-      `${job.title}-${job.workMode === "REMOTE" ? "remote" : job.location}`
-    );
-    return calculatedOrgSlug === orgSlug && calculatedJobSlug === jobSlug;
-  });
-}
-
 function prettifyType(type: string | null | undefined) {
   if (!type) return "Full Time";
   return type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
@@ -65,11 +57,18 @@ function prettifyMode(mode: string | null | undefined) {
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params;
-  const allJobs = await db.job.findMany({
-    where: { isActive: true },
+  
+  let job = await db.job.findUnique({
+    where: { slug: params.slug },
     include: { organization: true },
   });
-  const job = await findJobBySlugs(allJobs, params.orgSlug, params.jobSlug);
+
+  if (!job && params.slug.length >= 25 && params.slug.startsWith("c")) {
+    job = await db.job.findUnique({
+      where: { id: params.slug },
+      include: { organization: true },
+    });
+  }
 
   if (!job) {
     return {
@@ -84,7 +83,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     openGraph: {
       title: `${job.title} at ${job.organization?.name || "NGO"}`,
       description: cleanDescription,
-      url: `https://developmentwala.org/jobs/${params.orgSlug}/${params.jobSlug}`,
+      url: `https://developmentwala.org/jobs/${job.slug}`,
     },
   };
 }
@@ -95,18 +94,37 @@ export default async function JobDetailPage(props: Props) {
   const session = await auth();
   const user = session?.user;
 
-  const rawJobs = await db.job.findMany({
-    where: { isActive: true },
+  let selectedJob = await db.job.findUnique({
+    where: { slug: params.slug },
     include: {
       organization: true,
       postedBy: true,
     },
   });
 
-  const selectedJob = await findJobBySlugs(rawJobs, params.orgSlug, params.jobSlug);
   if (!selectedJob) {
+    if (params.slug.length >= 25 && params.slug.startsWith("c")) {
+      selectedJob = await db.job.findUnique({
+        where: { id: params.slug },
+        include: {
+          organization: true,
+          postedBy: true,
+        },
+      });
+      if (selectedJob) {
+        redirect(`/jobs/${selectedJob.slug}`);
+      }
+    }
     return notFound();
   }
+
+  const teamMembers = selectedJob.organizationId 
+    ? await db.teamMember.findMany({
+        where: { organizationId: selectedJob.organizationId },
+        orderBy: { displayOrder: "asc" },
+        take: 3
+      })
+    : [];
 
   const alreadyApplied = user?.id
     ? await db.application.findFirst({
@@ -116,6 +134,21 @@ export default async function JobDetailPage(props: Props) {
         },
       })
     : null;
+
+  const isSaved = user?.id
+    ? !!(await db.savedJob.findFirst({
+        where: {
+          candidateId: user.id,
+          jobId: selectedJob.id,
+        },
+      }))
+    : false;
+
+  const isPastDeadline = selectedJob.deadline 
+    ? new Date() > new Date(new Date(selectedJob.deadline).setUTCHours(23, 59, 59, 999)) 
+    : false;
+  const isActive = selectedJob.isActive !== false; // Default to true if undefined
+  const isClosed = isPastDeadline || !isActive;
 
   const backParams = new URLSearchParams();
   const keys: Array<keyof Awaited<Props["searchParams"]>> = [
@@ -194,7 +227,7 @@ export default async function JobDetailPage(props: Props) {
             </span>
             <span className="text-xs text-muted flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5" />
-              Posted {new Date(selectedJob.createdAt).toLocaleDateString()}
+              Posted {new Date(selectedJob.createdAt).toLocaleDateString("en-GB")}
             </span>
           </div>
 
@@ -260,34 +293,38 @@ export default async function JobDetailPage(props: Props) {
           </div>
         )}
 
-        {selectedJob.postedBy && (
+        {teamMembers.length > 0 && (
           <div className="border-t border-card-border pt-5 space-y-3">
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-primary">Opportunity Coordinator</h4>
-            <div className="flex items-center gap-3 p-3 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20 w-full sm:w-fit">
-              {selectedJob.postedBy.profilePhoto || selectedJob.postedBy.image ? (
-                <img
-                  src={selectedJob.postedBy.profilePhoto || selectedJob.postedBy.image || ""}
-                  alt=""
-                  className="w-10 h-10 rounded-full object-cover border border-card-border"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase">
-                  {selectedJob.postedBy.name?.substring(0, 1) || "R"}
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-primary">Meet the Recruitment Team</h4>
+            <div className="flex flex-wrap gap-3">
+              {teamMembers.map((member: any) => (
+                <div key={member.id} className="flex items-center gap-3 p-3 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20 w-full sm:w-fit">
+                  {member.profilePhoto ? (
+                    <img
+                      src={member.profilePhoto}
+                      alt={member.fullName}
+                      className="w-10 h-10 rounded-full object-cover border border-card-border"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                      {member.fullName?.substring(0, 1)}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-xs text-foreground leading-none">{member.fullName}</p>
+                    <p className="text-[9px] text-muted mt-1 leading-none">{member.designation}</p>
+                  </div>
                 </div>
-              )}
-              <div>
-                <p className="font-bold text-xs text-foreground leading-none">{selectedJob.postedBy.name}</p>
-                <p className="text-[9px] text-muted mt-1 leading-none">
-                  {selectedJob.postedBy.jobTitle || "Recruiter"} · {selectedJob.organization?.name}
-                </p>
-                <Link
-                  href={`/recruiter/${selectedJob.postedBy.id}`}
-                  className="text-[9px] font-bold text-primary hover:underline block mt-1 leading-none"
-                >
-                  View Recruiter Profile &rarr;
-                </Link>
-              </div>
+              ))}
             </div>
+            {selectedJob.organization && (
+              <Link
+                href={`/${slugify(selectedJob.organization.name)}`}
+                className="text-[9px] font-bold text-primary hover:underline block mt-2"
+              >
+                View Full Team Directory &rarr;
+              </Link>
+            )}
           </div>
         )}
 
@@ -295,9 +332,21 @@ export default async function JobDetailPage(props: Props) {
           <span className="text-xs text-muted break-all">
             {user ? `Applying as ${user.email}` : "Login required to apply"}
           </span>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
+            <SaveButton
+              opportunityId={selectedJob.id}
+              opportunityType="JOB"
+              initialSaved={isSaved}
+              isLoggedIn={!!user}
+              userRole={user?.role}
+            />
             <ShareButton label="Share Job" />
-            {user ? (
+            {isClosed ? (
+              <div className="px-6 py-2.5 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all w-full sm:w-auto">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                <span>Applications Closed</span>
+              </div>
+            ) : user ? (
               <ApplyButton
                 opportunityId={selectedJob.id}
                 opportunityTitle={selectedJob.title}
@@ -308,7 +357,7 @@ export default async function JobDetailPage(props: Props) {
               />
             ) : (
               <Link
-                href={`/auth/signin?callbackUrl=/jobs/${params.orgSlug}/${params.jobSlug}`}
+                href={`/auth/signin?callbackUrl=/jobs/${selectedJob.slug}`}
                 className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1 transition-all w-full sm:w-auto"
               >
                 <span>Login to Apply</span>

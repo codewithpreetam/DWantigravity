@@ -41,7 +41,7 @@ export default async function BlogDetailsPage(props: PageProps) {
           </h1>
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted">
             <span className="flex items-center gap-1"><User className="w-4 h-4" /> {blog.author?.name || "Editorial Team"}</span>
-            <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {new Date(blog.createdAt).toLocaleDateString()}</span>
+            <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {new Date(blog.createdAt).toLocaleDateString("en-GB")}</span>
             <span className="flex items-center gap-1"><Clock className="w-4 h-4" /> 4 min read</span>
           </div>
         </div>

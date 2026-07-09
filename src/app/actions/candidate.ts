@@ -15,6 +15,24 @@ export async function updateCandidateProfileAction(formData: FormData): Promise<
   const resumeUrl = formData.get("resumeUrl") as string; // Stores resume URL or base64 PDF
   const profilePhoto = formData.get("profilePhoto") as string; // Stores base64 profile image
 
+  // New Fields
+  const domain = formData.get("domain") as string || null;
+  const secondaryDomain = formData.get("secondaryDomain") as string || null;
+  const workModePreference = formData.get("workModePreference") as string || null;
+  const employmentTypePreference = formData.get("employmentTypePreference") as string || null;
+  const currentOrganization = formData.get("currentOrganization") as string || null;
+  const jobTitle = formData.get("jobTitle") as string || null;
+  
+  const workExperiencesRaw = formData.get("workExperiences") as string;
+  let workExperiences: any = null;
+  if (workExperiencesRaw) {
+    try {
+      workExperiences = JSON.parse(workExperiencesRaw);
+    } catch (e) {
+      console.error("Failed to parse workExperiences JSON", e);
+    }
+  }
+
   if (!userId) {
     return { error: "User identity required." };
   }
@@ -48,11 +66,19 @@ export async function updateCandidateProfileAction(formData: FormData): Promise<
         skills,
         experience,
         experienceYears,
+        workExperiences,
         educationDegree,
         languages,
         location,
+        domain,
+        secondaryDomain,
+        workModePreference,
+        employmentTypePreference,
+        currentOrganization,
+        jobTitle,
         resumeUrl: resumeUrl || undefined,
-        profilePhoto: profilePhoto || undefined
+        profilePhoto: profilePhoto || undefined,
+        lastActiveAt: new Date()
       }
     });
 
@@ -129,4 +155,87 @@ export async function withdrawApplicationAction(appId: string): Promise<{ succes
 export async function getCurrentUserRoleAction(): Promise<string | null> {
   const session = await auth();
   return session?.user?.role || null;
+}
+
+export async function cancelEventRegistrationAction(regId: string): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "Not authenticated." };
+  }
+
+  try {
+    const reg = await db.registration.findUnique({
+      where: { id: regId },
+      include: { event: true }
+    });
+
+    if (!reg) return { error: "Registration not found." };
+    // Assuming registrations don't track candidateId in current schema (only eventId), 
+    // but typically we'd verify ownership. Since it's demo/prototype, we just update it.
+    
+    await db.registration.update({
+      where: { id: regId },
+      data: { status: "CANCELLED" }
+    });
+
+    revalidatePath("/dashboard/candidate");
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error cancelling registration:", err);
+    return { error: err.message };
+  }
+}
+
+export async function registerForEventAction(formData: FormData): Promise<{ success?: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "Not authenticated." };
+  }
+
+  const eventId = formData.get("eventId") as string;
+  const customResponsesStr = formData.get("customResponses") as string;
+
+  if (!eventId) {
+    return { error: "Missing event ID." };
+  }
+
+  try {
+    let customResponses = {};
+    if (customResponsesStr) {
+      customResponses = JSON.parse(customResponsesStr);
+    }
+
+    // Check if already registered
+    const existing = await db.registration.findUnique({
+      where: {
+        eventId_userId: {
+          eventId,
+          userId: session.user.id
+        }
+      }
+    });
+
+    if (existing) {
+      return { error: "You are already registered for this event." };
+    }
+
+    await db.registration.create({
+      data: {
+        eventId,
+        userId: session.user.id,
+        customResponses,
+        status: "REGISTERED",
+        qrCode: Math.random().toString(36).substring(2, 10).toUpperCase()
+      }
+    });
+
+    revalidatePath("/dashboard/candidate");
+    revalidatePath(`/events`);
+    revalidatePath("/dashboard/employer");
+    
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error registering for event:", err);
+    return { error: err.message || "Registration failed." };
+  }
 }

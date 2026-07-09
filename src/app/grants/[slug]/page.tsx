@@ -1,28 +1,58 @@
 import { db } from "@/lib/db";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Building, Calendar, IndianRupee } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Building, Calendar, IndianRupee, AlertCircle } from "lucide-react";
 import ApplyButton from "@/components/ApplyButton";
 import ShareButton from "@/components/ShareButton";
+import SaveButton from "@/components/SaveButton";
 import { auth } from "@/auth";
 
 interface Props {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }
 
 export default async function GrantDetailPage(props: Props) {
   const params = await props.params;
   const session = await auth();
   const user = session?.user;
-  const grant = await db.grant.findUnique({
-    where: { id: params.id },
+  let grant = await db.grant.findUnique({
+    where: { slug: params.slug },
   });
 
-  if (!grant) return notFound();
+  if (!grant) {
+    if (params.slug.length >= 25 && params.slug.startsWith("c")) {
+      grant = await db.grant.findUnique({
+        where: { id: params.slug },
+      });
+      if (grant) {
+        redirect(`/grants/${grant.slug}`);
+      }
+    }
+    return notFound();
+  }
 
   // Resolve relations
   const organization = await db.organization.findUnique({ where: { id: grant.organizationId } });
-  const postedBy = grant.postedById ? await db.user.findUnique({ where: { id: grant.postedById } }) : null;
+  
+  const teamMembers = grant.organizationId 
+    ? await db.teamMember.findMany({
+        where: { organizationId: grant.organizationId },
+        orderBy: { displayOrder: "asc" },
+        take: 3
+      })
+    : [];
+
+  const isSaved = user?.id
+    ? !!(await db.savedJob.findFirst({
+        where: { candidateId: user.id, grantId: grant.id },
+      }))
+    : false;
+
+  const isPastDeadline = grant.deadline 
+    ? new Date() > new Date(new Date(grant.deadline).setUTCHours(23, 59, 59, 999)) 
+    : false;
+  const isActive = grant.isActive !== false; // Default to true if undefined
+  const isClosed = isPastDeadline || !isActive;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 flex-1 space-y-6 text-left">
@@ -49,7 +79,7 @@ export default async function GrantDetailPage(props: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-muted">
           <div className="flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-primary" /> 
-            <span>Deadline: {grant.deadline ? new Date(grant.deadline).toLocaleDateString() : "Open"}</span>
+            <span>Deadline: {grant.deadline ? new Date(grant.deadline).toLocaleDateString("en-GB") : "Open"}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <IndianRupee className="w-4 h-4 text-primary" /> 
@@ -69,21 +99,38 @@ export default async function GrantDetailPage(props: Props) {
           </div>
         )}
 
-        {postedBy && (
+        {teamMembers.length > 0 && (
           <div className="border-t border-card-border pt-5 space-y-3">
-            <h4 className="text-[10px] font-bold uppercase tracking-wider text-primary">Opportunity Coordinator</h4>
-            <div className="flex items-center gap-3 p-3 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20 w-full sm:w-fit">
-              {postedBy.profilePhoto || postedBy.image ? (
-                <img src={postedBy.profilePhoto || postedBy.image || ""} alt="" className="w-10 h-10 rounded-full object-cover border border-card-border" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase">{postedBy.name?.substring(0,1)}</div>
-              )}
-              <div>
-                <p className="font-bold text-xs text-foreground leading-none">{postedBy.name}</p>
-                <p className="text-[9px] text-muted mt-1 leading-none">{postedBy.jobTitle || "Recruiter"} &middot; {organization?.name}</p>
-                <Link href={`/recruiter/${postedBy.id}`} className="text-[9px] font-bold text-primary hover:underline block mt-1 leading-none">View Profile &rarr;</Link>
-              </div>
+            <h4 className="text-[10px] font-bold uppercase tracking-wider text-primary">Meet the Recruitment Team</h4>
+            <div className="flex flex-wrap gap-3">
+              {teamMembers.map((member: any) => (
+                <div key={member.id} className="flex items-center gap-3 p-3 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20 w-full sm:w-fit">
+                  {member.profilePhoto ? (
+                    <img
+                      src={member.profilePhoto}
+                      alt={member.fullName}
+                      className="w-10 h-10 rounded-full object-cover border border-card-border"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                      {member.fullName?.substring(0, 1)}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-xs text-foreground leading-none">{member.fullName}</p>
+                    <p className="text-[9px] text-muted mt-1 leading-none">{member.designation}</p>
+                  </div>
+                </div>
+              ))}
             </div>
+            {organization && (
+              <Link
+                href={`/${organization.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`}
+                className="text-[9px] font-bold text-primary hover:underline block mt-2"
+              >
+                View Full Team Directory &rarr;
+              </Link>
+            )}
           </div>
         )}
 
@@ -95,9 +142,21 @@ export default async function GrantDetailPage(props: Props) {
                   : `Applying as ${user.email}`) 
               : "Login required to apply"}
           </span>
-          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-center">
+            <SaveButton
+              opportunityId={grant.id}
+              opportunityType="GRANT"
+              initialSaved={isSaved}
+              isLoggedIn={!!user}
+              userRole={user?.role}
+            />
             <ShareButton label="Share Grant" />
-            {user ? (
+            {isClosed ? (
+              <div className="px-6 py-2.5 bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all w-full sm:w-auto">
+                <AlertCircle className="w-4 h-4 text-red-500" />
+                <span>Applications Closed</span>
+              </div>
+            ) : user ? (
               session.user.role === "SEEKER" ? (
                 <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold rounded-lg leading-relaxed max-w-sm w-full sm:w-auto">
                   ⚠️ Grants are only open to NGO and organization profiles, not individual candidates.
@@ -113,7 +172,7 @@ export default async function GrantDetailPage(props: Props) {
                 />
               )
             ) : (
-              <Link href={`/auth/signin?callbackUrl=/grants/${grant.id}`} className="px-5 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg w-full sm:w-auto text-center">Login to Apply</Link>
+              <Link href={`/auth/signin?callbackUrl=/grants/${grant.slug}`} className="px-5 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-semibold rounded-lg w-full sm:w-auto text-center">Login to Apply</Link>
             )}
           </div>
         </div>

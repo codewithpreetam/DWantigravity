@@ -2,26 +2,28 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Bold, Italic, Heading, List } from "lucide-react";
+import { Bold, Italic, Heading, List, Building, X } from "lucide-react";
 import { 
   createJobAction, createInternshipAction, createFellowshipAction,
   createScholarshipAction, createGrantAction, createConsultancyAction,
   createVolunteerAction, createEventAction, updateOpportunityAction
 } from "@/app/actions/employer";
 import { MASTER_SKILLS } from "@/lib/skills";
+import toast from "react-hot-toast";
 
 interface OpportunityPostFormProps {
-  organizationId: string;
+  organizationId?: string; // Optional if adminOrgs is provided
   editOpp?: any; // The opportunity object being edited
   cancelUrl?: string;
+  adminOrgs?: { id: string; name: string }[];
 }
 
 type OpportunityType = "JOB" | "INTERNSHIP" | "FELLOWSHIP" | "SCHOLARSHIP" | "GRANT" | "CONSULTANCY" | "VOLUNTEER" | "EVENT";
 
-export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl }: OpportunityPostFormProps) {
+export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl, adminOrgs }: OpportunityPostFormProps) {
   const [type, setType] = useState<OpportunityType>(editOpp?.type || "JOB");
   const [isPending, setIsPending] = useState(false);
-  const [message, setMessage] = useState<{ success?: string; error?: string } | null>(null);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>(organizationId || adminOrgs?.[0]?.id || "");
 
   const [requiredSkills, setRequiredSkills] = useState<string[]>(editOpp?.requiredSkills || []);
   const [preferredSkills, setPreferredSkills] = useState<string[]>(editOpp?.preferredSkills || []);
@@ -95,6 +97,45 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const html = e.clipboardData.getData("text/html");
+    const text = e.clipboardData.getData("text/plain");
+
+    if (html) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+
+      const unwanted = doc.body.querySelectorAll("script, style, meta, link, iframe, object, embed, img, svg");
+      unwanted.forEach(el => el.remove());
+
+      const allElements = doc.body.querySelectorAll("*");
+      allElements.forEach((el) => {
+        const href = el.getAttribute("href");
+        while (el.attributes.length > 0) el.removeAttribute(el.attributes[0].name);
+        if (el.tagName.toLowerCase() === "a" && href) {
+          el.setAttribute("href", href);
+          el.setAttribute("target", "_blank");
+          el.setAttribute("rel", "noopener noreferrer");
+        }
+        if (["H1", "H2", "H4", "H5", "H6"].includes(el.tagName)) {
+          const h3 = document.createElement("h3");
+          h3.innerHTML = el.innerHTML;
+          el.parentNode?.replaceChild(h3, el);
+        }
+      });
+
+      document.execCommand("insertHTML", false, doc.body.innerHTML);
+    } else if (text) {
+      const cleanText = text.replace(/\n/g, "<br>");
+      document.execCommand("insertHTML", false, cleanText);
+    }
+
+    setTimeout(() => {
+      if (editorRef.current) setDescriptionHtml(editorRef.current.innerHTML);
+    }, 0);
+  };
+
   const handleEditorInput = (e: React.FormEvent<HTMLDivElement>) => {
     setDescriptionHtml(e.currentTarget.innerHTML);
   };
@@ -102,11 +143,15 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsPending(true);
-    setMessage(null);
 
     const form = e.currentTarget;
     const formData = new FormData(form);
-    formData.append("organizationId", organizationId);
+    if (!selectedOrgId) {
+      toast.error("Organization ID is missing.");
+      setIsPending(false);
+      return;
+    }
+    formData.append("organizationId", selectedOrgId);
     
     if (type === "EVENT" && coverImage) {
       formData.append("coverImage", coverImage);
@@ -130,11 +175,18 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
         if (res?.error) {
           throw new Error(res.error);
         }
-        setMessage({ success: `Successfully updated your ${type.toLowerCase()} opportunity!` });
+        
+        const typeLabel = type.charAt(0) + type.slice(1).toLowerCase();
+        toast.success(`${typeLabel} successfully updated.`, { icon: "✅", duration: 3000 });
+        
         if (cancelUrl) {
           setTimeout(() => {
             window.location.href = cancelUrl;
-          }, 1000);
+          }, 1500);
+        } else {
+          setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, 1500);
         }
         return;
       }
@@ -165,15 +217,22 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
           await createEventAction(formData);
           break;
       }
-      setMessage({ success: `Successfully published your new ${type.toLowerCase()} opportunity!` });
+      const typeLabel = type.charAt(0) + type.slice(1).toLowerCase();
+      toast.success(`${typeLabel} successfully submitted.`, { icon: "✅", duration: 3000 });
+      
       form.reset();
       setDescriptionHtml("");
       if (editorRef.current) {
         editorRef.current.innerHTML = "";
       }
+
+      setTimeout(() => {
+        window.location.href = "/dashboard/employer";
+      }, 1500);
+      
     } catch (err: any) {
       console.error(err);
-      setMessage({ error: err.message || "An unexpected error occurred while saving." });
+      toast.error(err.message || "An unexpected error occurred while saving.");
     } finally {
       setIsPending(false);
     }
@@ -199,7 +258,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
               <button
                 key={t}
                 type="button"
-                onClick={() => { setType(t); setMessage(null); }}
+                onClick={() => { setType(t); }}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-bold tracking-wider transition-all cursor-pointer ${
                   type === t 
                     ? "bg-primary text-white shadow-sm" 
@@ -228,21 +287,27 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
           )}
         </div>
 
-        {message?.success && (
-          <div className="p-3 mb-4 rounded bg-emerald-500/10 border border-emerald-500/20 text-xs text-primary font-semibold text-center animate-fadeIn">
-            🎉 {message.success}
-          </div>
-        )}
-        {message?.error && (
-          <div className="p-3 mb-4 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-500 font-semibold text-center animate-fadeIn">
-            ⚠️ {message.error}
+        <form onSubmit={handleSubmit} className="space-y-6 text-xs text-left">
+        
+        {/* Admin Organization Selector */}
+        {adminOrgs && adminOrgs.length > 0 && !editOpp && (
+          <div className="flex flex-col gap-1 p-4 bg-primary/5 border border-primary/20 rounded-xl">
+            <label className="font-bold text-primary flex items-center gap-1.5"><Building className="w-4 h-4" /> Post on behalf of Organization *</label>
+            <select 
+              value={selectedOrgId}
+              onChange={(e) => setSelectedOrgId(e.target.value)}
+              className="form-input"
+              required
+            >
+              {adminOrgs.map(org => (
+                <option key={org.id} value={org.id}>{org.name}</option>
+              ))}
+            </select>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs text-left">
-          {/* Common Fields */}
-          <div className="flex flex-col gap-1">
-            <label className="font-semibold text-muted">Title</label>
+        <div className="flex flex-col gap-1">
+            <label className="font-semibold text-muted">Title *</label>
             <input 
               type="text" 
               name="title" 
@@ -256,7 +321,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
           </div>
 
           <div className="flex flex-col gap-1 text-left">
-            <label className="font-semibold text-muted">Description</label>
+            <label className="font-semibold text-muted">Description *</label>
             <input type="hidden" name="description" value={descriptionHtml} />
             
             <div className="rounded-xl border border-card-border overflow-hidden bg-white/40 dark:bg-zinc-950/20">
@@ -264,7 +329,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
               <div className="p-2 border-b border-card-border bg-neutral-50/50 dark:bg-zinc-950/30 flex flex-wrap gap-1 items-center">
                 <button
                   type="button"
-                  onClick={() => formatText("bold")}
+                  onMouseDown={(e) => { e.preventDefault(); formatText("bold"); }}
                   className="p-1.5 text-muted hover:text-foreground hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded cursor-pointer transition-colors"
                   title="Bold"
                 >
@@ -272,7 +337,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
                 </button>
                 <button
                   type="button"
-                  onClick={() => formatText("italic")}
+                  onMouseDown={(e) => { e.preventDefault(); formatText("italic"); }}
                   className="p-1.5 text-muted hover:text-foreground hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded cursor-pointer transition-colors"
                   title="Italic"
                 >
@@ -280,7 +345,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
                 </button>
                 <button
                   type="button"
-                  onClick={() => formatText("formatBlock", "<h3>")}
+                  onMouseDown={(e) => { e.preventDefault(); formatText("formatBlock", "<h3>"); }}
                   className="p-1.5 text-muted hover:text-foreground hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded cursor-pointer transition-colors"
                   title="Heading"
                 >
@@ -288,7 +353,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
                 </button>
                 <button
                   type="button"
-                  onClick={() => formatText("insertUnorderedList")}
+                  onMouseDown={(e) => { e.preventDefault(); formatText("insertUnorderedList"); }}
                   className="p-1.5 text-muted hover:text-foreground hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded cursor-pointer transition-colors"
                   title="Bullet List"
                 >
@@ -296,7 +361,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
                 </button>
                 <button
                   type="button"
-                  onClick={handleInsertLink}
+                  onMouseDown={(e) => { e.preventDefault(); handleInsertLink(); }}
                   className="px-2 py-1 text-muted hover:text-foreground hover:bg-neutral-200 dark:hover:bg-zinc-800 rounded cursor-pointer transition-colors text-[10px] font-bold"
                   title="Insert Hyperlink"
                 >
@@ -308,17 +373,19 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
               <div
                 ref={editorRef}
                 contentEditable
+                onPaste={handlePaste}
                 onInput={handleEditorInput}
-                className="p-3 text-xs text-foreground focus:outline-none min-h-[160px] max-h-[350px] overflow-y-auto bg-transparent whitespace-pre-wrap leading-relaxed text-left"
+                className="editor-content p-4 text-sm text-foreground focus:outline-none min-h-[160px] max-h-[350px] overflow-y-auto bg-transparent whitespace-pre-wrap leading-relaxed text-left"
               />
             </div>
           </div>
 
           {type !== "EVENT" && (
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-muted">Requirements</label>
+              <label className="font-semibold text-muted">Requirements *</label>
               <textarea 
                 name="requirements" 
+                required
                 rows={3} 
                 defaultValue={editOpp?.requirements || ""}
                 placeholder="Qualifications, technical skills, language parameters..." 
@@ -330,7 +397,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
           {/* Conditional Fields based on Type */}
           {(type === "JOB" || type === "INTERNSHIP" || type === "FELLOWSHIP" || type === "CONSULTANCY" || type === "VOLUNTEER" || type === "EVENT") && (
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-muted">Location</label>
+              <label className="font-semibold text-muted">Location *</label>
               <input 
                 type="text" 
                 name="location" 
@@ -346,29 +413,29 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-muted">Min Salary (INR/year)</label>
+                  <label className="font-semibold text-muted">Min Salary (INR/year) (Recommended)</label>
                   <input 
                     type="number" 
                     name="salaryMin" 
                     defaultValue={editOpp?.salaryMin || ""}
-                    placeholder="400000" 
+                    placeholder="400000 (Leave empty if Not Disclosed)" 
                     className="form-input" 
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-muted">Max Salary (INR/year)</label>
+                  <label className="font-semibold text-muted">Max Salary (INR/year) (Recommended)</label>
                   <input 
                     type="number" 
                     name="salaryMax" 
                     defaultValue={editOpp?.salaryMax || ""}
-                    placeholder="600000" 
+                    placeholder="600000 (Leave empty if Not Disclosed)" 
                     className="form-input" 
                   />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-muted">Employment Type</label>
+                  <label className="font-semibold text-muted">Employment Type *</label>
                   <select 
                     name="employmentType" 
                     defaultValue={editOpp?.employmentType || "FULL_TIME"}
@@ -383,7 +450,7 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="font-semibold text-muted">Work Mode</label>
+                  <label className="font-semibold text-muted">Work Mode *</label>
                   <select 
                     name="workMode" 
                     defaultValue={editOpp?.workMode || "ON_SITE"}
@@ -401,20 +468,21 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
           {(type === "INTERNSHIP" || type === "FELLOWSHIP") && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
-                <label className="font-semibold text-muted">Stipend (INR/month)</label>
+                <label className="font-semibold text-muted">Stipend (INR/month) (Recommended)</label>
                 <input 
                   type="number" 
                   name="stipend" 
                   defaultValue={editOpp?.stipend || ""}
-                  placeholder="15000" 
+                  placeholder="15000 (Leave empty if unpaid)" 
                   className="form-input" 
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="font-semibold text-muted">Duration (e.g. 6 Months)</label>
+                <label className="font-semibold text-muted">Duration (e.g. 6 Months) *</label>
                 <input 
                   type="text" 
                   name="duration" 
+                  required
                   defaultValue={editOpp?.duration || ""}
                   placeholder="6 Months" 
                   className="form-input" 
@@ -424,26 +492,15 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
           )}
 
           {type === "SCHOLARSHIP" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="font-semibold text-muted">Award Amount (INR)</label>
-                <input 
-                  type="number" 
-                  name="amount" 
-                  defaultValue={editOpp?.amount || ""}
-                  placeholder="50000" 
-                  className="form-input" 
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="font-semibold text-muted">Application Deadline</label>
-                <input 
-                  type="date" 
-                  name="deadline" 
-                  defaultValue={formatDateVal(editOpp?.deadline)}
-                  className="form-input" 
-                />
-              </div>
+            <div className="flex flex-col gap-1">
+              <label className="font-semibold text-muted">Award Amount (INR) (Recommended)</label>
+              <input 
+                type="number" 
+                name="amount" 
+                defaultValue={editOpp?.amount || ""}
+                placeholder="50000" 
+                className="form-input" 
+              />
             </div>
           )}
 
@@ -510,12 +567,25 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
 
           {type === "VOLUNTEER" && (
             <div className="flex flex-col gap-1">
-              <label className="font-semibold text-muted">Duration / Frequency</label>
+              <label className="font-semibold text-muted">Duration / Frequency *</label>
               <input 
                 type="text" 
                 name="duration" 
                 defaultValue={editOpp?.duration || ""}
                 placeholder="Every Saturday or 2 Weeks Relief" 
+                className="form-input" 
+              />
+            </div>
+          )}
+
+          {type !== "EVENT" && (
+            <div className="flex flex-col gap-1">
+              <label className="font-semibold text-muted">Application Deadline *</label>
+              <input 
+                type="date" 
+                name="deadline" 
+                required
+                defaultValue={formatDateVal(editOpp?.deadline)}
                 className="form-input" 
               />
             </div>
@@ -541,17 +611,24 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="font-semibold text-muted">Event Date</label>
+                <label className="font-semibold text-muted">Event Date *</label>
                 <input type="date" name="date" required defaultValue={formatDateVal(editOpp?.date)} className="form-input" />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="font-semibold text-muted">Event Time</label>
+                <label className="font-semibold text-muted">Event Time *</label>
                 <input type="time" name="time" required defaultValue={editOpp?.time || ""} className="form-input" />
               </div>
 
               <div className="flex flex-col gap-1">
                 <label className="font-semibold text-muted">Time Zone</label>
-                <input type="text" name="timeZone" placeholder="e.g. IST, GMT" defaultValue={editOpp?.timeZone || ""} className="form-input" />
+                <select name="timeZone" defaultValue={editOpp?.timeZone || "IST"} className="form-input">
+                  <option value="IST">IST (Kolkata, Chennai, Mumbai, New Delhi, India)</option>
+                  <option value="GMT">GMT (Greenwich Mean Time)</option>
+                  <option value="UTC">UTC (Coordinated Universal Time)</option>
+                  <option value="PST">PST (Pacific Standard Time)</option>
+                  <option value="EST">EST (Eastern Standard Time)</option>
+                  <option value="CET">CET (Central European Time)</option>
+                </select>
               </div>
               <div className="flex flex-col gap-1">
                 <label className="font-semibold text-muted">Duration</label>
@@ -559,8 +636,8 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="font-semibold text-muted">Registration Deadline</label>
-                <input type="date" name="registrationDeadline" defaultValue={formatDateVal(editOpp?.registrationDeadline)} className="form-input" />
+                <label className="font-semibold text-muted">Registration Deadline *</label>
+                <input type="date" name="registrationDeadline" required defaultValue={formatDateVal(editOpp?.registrationDeadline)} className="form-input" />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="font-semibold text-muted">Capacity (Max Pax)</label>
@@ -718,25 +795,39 @@ export default function OpportunityPostForm({ organizationId, editOpp, cancelUrl
                         <div key={skill} className="flex items-center justify-between p-2 rounded-lg bg-white/40 dark:bg-zinc-900/30 border border-card-border">
                           <span className="font-semibold text-foreground text-[10px]">{skill}</span>
                           <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isReq) {
-                                  setRequiredSkills(requiredSkills.filter(s => s !== skill));
-                                  setPreferredSkills([...preferredSkills, skill]);
-                                } else {
-                                  setPreferredSkills(preferredSkills.filter(s => s !== skill));
-                                  setRequiredSkills([...requiredSkills, skill]);
-                                }
-                              }}
-                              className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
-                                isReq 
-                                  ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20"
-                                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                              }`}
-                            >
-                              {isReq ? "Required (10 pts)" : "Preferred (5 pts)"}
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isReq) {
+                                    setRequiredSkills(requiredSkills.filter(s => s !== skill));
+                                    setPreferredSkills([...preferredSkills, skill]);
+                                  } else {
+                                    setPreferredSkills(preferredSkills.filter(s => s !== skill));
+                                    setRequiredSkills([...requiredSkills, skill]);
+                                  }
+                                }}
+                                className={`px-2 py-0.5 rounded text-[9px] font-bold cursor-pointer transition-colors ${
+                                  isReq 
+                                    ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20"
+                                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                }`}
+                              >
+                                {isReq ? "Required (10 pts)" : "Preferred (5 pts)"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isReq) {
+                                    setRequiredSkills(requiredSkills.filter(s => s !== skill));
+                                  } else {
+                                    setPreferredSkills(preferredSkills.filter(s => s !== skill));
+                                  }
+                                }}
+                                className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-600 transition-colors"
+                                title="Remove Skill"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
                           </div>
                         </div>
                       );

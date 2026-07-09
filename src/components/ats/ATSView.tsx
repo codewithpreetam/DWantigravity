@@ -1054,7 +1054,7 @@ export default function ATSView({ opportunities, applications }: ATSViewProps) {
                             <div className="absolute left-3.5 top-0 bottom-0 w-px bg-card-border" />
                             <div className="space-y-0">
                               {[
-                                { stage: "APPLIED", label: "Applied", sub: `Applied on ${new Date(selectedApp.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}` },
+                                { stage: "APPLIED", label: "Applied", sub: `Applied on ${new Date(selectedApp.createdAt).toLocaleDateString("en-GB")}` },
                                 { stage: "UNDER_REVIEW", label: "Under Review", sub: "Profile reviewed by recruiter" },
                                 { stage: "SHORTLISTED", label: "Shortlisted", sub: "Candidate shortlisted for next round" },
                                 { stage: "INTERVIEW_SCHEDULED", label: "Interview Scheduled", sub: "Interview invitation sent" },

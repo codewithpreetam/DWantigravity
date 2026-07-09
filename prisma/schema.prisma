@@ -106,10 +106,23 @@ model User {
   skills           String[]
   experience       String?
   experienceYears  Int?           @default(0)
+  workExperiences  Json?          // Array of detailed work experiences
   educationDegree  String?
   languages        String[]
   location         String?
   bio              String?
+  domain           String?
+  secondaryDomain  String?
+  workModePreference String?
+  employmentTypePreference String?
+  currentOrganization String?
+  noticePeriod     String?
+  employmentStatus String?
+  currentSalary    String?
+  expectedSalary   String?
+  availability     String?
+  lastActiveAt     DateTime       @default(now())
+
   applications     Application[]
   savedJobs        SavedJob[]
   savedSearches    SavedSearch[]
@@ -204,6 +217,24 @@ model Organization {
   payments      Payment[]
   subscriptions Subscription[]
   events        Event[]
+  teamMembers   TeamMember[] @relation("OrgTeamMembers")
+}
+
+model TeamMember {
+  id              String       @id @default(cuid())
+  organizationId  String
+  fullName        String
+  designation     String
+  bio             String?      @db.Text
+  profilePhoto    String?
+  email           String?
+  phone           String?
+  linkedinUrl     String?
+  displayOrder    Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation("OrgTeamMembers", fields: [organizationId], references: [id], onDelete: Cascade)
 }
 
 model Category {
@@ -234,6 +265,7 @@ model Location {
 
 model Job {
   id                 String    @id @default(cuid())
+  slug               String    @unique @default(cuid())
   title              String
   description        String
   requirements       String?
@@ -250,6 +282,7 @@ model Job {
   minExperienceYears Int?      @default(0)
   minEducation       String?
   requiredLanguages  String[]
+  deadline           DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -267,6 +300,7 @@ model Job {
 
 model Internship {
   id                 String    @id @default(cuid())
+  slug               String    @unique @default(cuid())
   title              String
   description        String
   requirements       String?
@@ -280,6 +314,7 @@ model Internship {
   minExperienceYears Int?      @default(0)
   minEducation       String?
   requiredLanguages  String[]
+  deadline           DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -297,6 +332,7 @@ model Internship {
 
 model Fellowship {
   id                 String    @id @default(cuid())
+  slug               String    @unique @default(cuid())
   title              String
   description        String
   requirements       String?
@@ -310,6 +346,7 @@ model Fellowship {
   minExperienceYears Int?      @default(0)
   minEducation       String?
   requiredLanguages  String[]
+  deadline           DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -327,6 +364,7 @@ model Fellowship {
 
 model Scholarship {
   id                 String    @id @default(cuid())
+  slug               String    @unique @default(cuid())
   title              String
   description        String
   requirements       String?
@@ -338,6 +376,7 @@ model Scholarship {
   minExperienceYears Int?      @default(0)
   minEducation       String?
   requiredLanguages  String[]
+  deadline           DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -355,6 +394,7 @@ model Scholarship {
 
 model Grant {
   id                 String    @id @default(cuid())
+  slug               String    @unique @default(cuid())
   title              String
   description        String
   requirements       String?
@@ -385,6 +425,7 @@ model Grant {
 
 model Consultancy {
   id                 String    @id @default(cuid())
+  slug               String    @unique @default(cuid())
   title              String
   description        String
   requirements       String?
@@ -397,6 +438,7 @@ model Consultancy {
   minExperienceYears Int?      @default(0)
   minEducation       String?
   requiredLanguages  String[]
+  deadline           DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -414,6 +456,7 @@ model Consultancy {
 
 model Volunteer {
   id                 String    @id @default(cuid())
+  slug               String    @unique @default(cuid())
   title              String
   description        String
   requirements       String?
@@ -425,6 +468,7 @@ model Volunteer {
   minExperienceYears Int?      @default(0)
   minEducation       String?
   requiredLanguages  String[]
+  deadline           DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -524,6 +568,9 @@ model SavedJob {
 
   volunteerId String?
   volunteer   Volunteer? @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
 model SavedSearch {
@@ -569,6 +616,7 @@ model Event {
   contactPhone         String?
   agenda               String?
   speakers             Json?
+  customQuestions      Json?
   timeZone             String?
   duration             String?
   venue                String?
@@ -576,6 +624,11 @@ model Event {
   state                String?
   country              String?
   meetingPlatform      String?
+  meetingLink          String?
+  meetingPassword      String?
+  joiningInstructions  String?   @db.Text
+  contactPerson        String?
+  joinButtonVisibility String?   @default("IMMEDIATE") // IMMEDIATE, 24H, 1H, 15M, MANUAL
   certificateAvailable Boolean   @default(false)
   recordingAvailable   Boolean   @default(false)
 
@@ -590,14 +643,17 @@ model Event {
 
   registrations Registration[]
   applications  Application[]
+  savedJobs     SavedJob[]
 }
 
 model Registration {
-  id             String   @id @default(cuid())
-  qrCode         String? // mock token/string
-  certificateUrl String?
-  attended       Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  id              String   @id @default(cuid())
+  qrCode          String? // mock token/string
+  certificateUrl  String?
+  attended        Boolean  @default(false)
+  status          String   @default("REGISTERED") // REGISTERED, APPROVED, WAITLISTED, CANCELLED, CHECKED_IN, ATTENDED, ABSENT, COMPLETED
+  customResponses Json?
+  createdAt       DateTime @default(now())
 
   eventId String
   event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)

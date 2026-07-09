@@ -147,7 +147,7 @@ export default async function Home() {
       }),
       db.event.findFirst({
         include: { organizer: true },
-        orderBy: { date: "asc" },
+        orderBy: { createdAt: "desc" },
         where: { date: { gte: new Date() } },
       }),
     ]);
@@ -371,7 +371,7 @@ export default async function Home() {
                   </span>
                   {featuredGrant.deadline && (
                     <span className="text-[10px] text-muted">
-                      Deadline: {new Date(featuredGrant.deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      Deadline: {new Date(featuredGrant.deadline).toLocaleDateString("en-GB")}
                     </span>
                   )}
                 </div>
@@ -446,7 +446,7 @@ export default async function Home() {
                     {featuredEvent.format === "WEBINAR" ? "Webinar" : featuredEvent.format === "HYBRID" ? "Hybrid Event" : "In-Person Event"}
                   </span>
                   <span className="text-[10px] text-muted flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> {new Date(featuredEvent.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    <Calendar className="w-3 h-3" /> {new Date(featuredEvent.date).toLocaleDateString("en-GB")}
                   </span>
                 </div>
                 <h3 className="font-bold text-base text-foreground line-clamp-1 hover:text-primary transition-colors">

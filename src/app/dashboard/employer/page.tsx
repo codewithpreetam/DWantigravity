@@ -12,8 +12,12 @@ import {
 import { DashboardMobileNav } from "@/components/DashboardMobileNav";
 import OpportunityPostForm from "@/components/OpportunityPostForm";
 import ATSFilterSelect from "@/components/ATSFilterSelect";
+import AlertsView from "@/components/AlertsView";
 import SupportChat from "@/components/SupportChat";
 import ATSView from "@/components/ats/ATSView";
+import TeamMembersManager from "@/components/TeamMembersManager";
+import ClientActionForm from "@/components/ClientActionForm";
+import ImageUploadBase64 from "@/components/ImageUploadBase64";
 import { 
   getMessagesAction, 
   getNotificationsAction, 
@@ -22,8 +26,6 @@ import {
 import { 
   updateRecruiterProfileAction, 
   updateOrgProfileRichAction, 
-  inviteRecruiterAction, 
-  removeRecruiterMemberAction, 
   scheduleInterviewAction, 
   updateOpportunityStatusAction,
   updateApplicationEvaluationAction 
@@ -127,8 +129,9 @@ export default async function EmployerDashboardPage(props: PageProps) {
   };
 
   // Fetch all recruiters associated with this organization
-  const recruiters = await db.user.findMany({
-    where: { organizationId: org.id, role: "EMPLOYER" }
+  const teamMembers = await db.teamMember.findMany({
+    where: { organizationId: org.id },
+    orderBy: { displayOrder: "asc" }
   });
 
   // Fetch applications for all active jobs / opportunities
@@ -290,6 +293,7 @@ export default async function EmployerDashboardPage(props: PageProps) {
           { id: "org", label: "Organization Profile", icon: <Building2 className="w-4 h-4 shrink-0" /> },
           { id: "recruiter-profile", label: "Recruiter Profile", icon: <User className="w-4 h-4 shrink-0" /> },
           { id: "billing", label: "Plan & Billing", icon: <CreditCard className="w-4 h-4 shrink-0" /> },
+          { id: "alerts", label: "Alerts & Notifications", icon: <Bell className="w-4 h-4 shrink-0" /> },
           { id: "settings", label: "Account Settings", icon: <Settings className="w-4 h-4 shrink-0" /> },
           { id: "support", label: "Help & Support", icon: <HelpCircle className="w-4 h-4 shrink-0" /> },
         ]}
@@ -307,11 +311,12 @@ export default async function EmployerDashboardPage(props: PageProps) {
             { id: "new-job", label: "Post Opportunity", icon: PlusCircle },
             { id: "jobs-manager", label: "Opportunity Manager", icon: Briefcase },
             { id: "analytics", label: "Analytics Workspace", icon: BarChart3 },
-            { id: "team", label: "Team Collaboration", icon: UserPlus },
+            { id: "team", label: "Team Members", icon: UserPlus },
             { id: "org", label: "Organization Details", icon: Building },
             { id: "recruiter-profile", label: "Recruiter Profile", icon: User },
             { id: "settings", label: "Settings", icon: Settings },
             { id: "billing", label: "Billing & Plans", icon: CreditCard },
+            { id: "alerts", label: "Alerts & Notifications", icon: Bell },
             { id: "support", label: "Admin Support Desk", icon: Mail },
           ].map((item) => {
             const Icon = item.icon;
@@ -356,10 +361,15 @@ export default async function EmployerDashboardPage(props: PageProps) {
                   <p className="text-2xl font-black text-foreground mt-1">{applications.length}</p>
                   <Link href="/dashboard/employer?tab=ats" className="text-[9px] text-primary font-bold hover:underline block mt-1">Open Board &rarr;</Link>
                 </div>
-                <div className="glass-panel p-4 rounded-xl border border-card-border">
-                  <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Team Recruiters</p>
-                  <p className="text-2xl font-black text-foreground mt-1">{recruiters.length}</p>
-                  <Link href="/dashboard/employer?tab=team" className="text-[9px] text-primary font-bold hover:underline block mt-1">View Team &rarr;</Link>
+                <div className="bg-white/40 dark:bg-zinc-950/40 p-4 rounded-xl border border-card-border flex items-center gap-3 shadow-sm">
+                  <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                    <UserPlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-foreground leading-none">{teamMembers.length}</h3>
+                    <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Team Directory</p>
+                  </div>
+                  <Link href="/dashboard/employer?tab=team" className="text-[9px] text-primary font-bold hover:underline block mt-1">Manage &rarr;</Link>
                 </div>
                 <div className="glass-panel p-4 rounded-xl border border-card-border">
                   <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Verification Status</p>
@@ -495,14 +505,18 @@ export default async function EmployerDashboardPage(props: PageProps) {
                   <div className="glass-panel p-5 rounded-xl border border-card-border space-y-3">
                     <h3 className="font-bold text-foreground text-xs">Hiring Squad</h3>
                     <div className="space-y-2">
-                      {recruiters.slice(0, 3).map((rec: any) => (
+                      {teamMembers.slice(0, 3).map((rec: any) => (
                         <div key={rec.id} className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-[9px] uppercase">
-                            {rec.name?.substring(0, 1)}
-                          </div>
+                          {rec.profilePhoto ? (
+                            <img src={rec.profilePhoto} alt={rec.fullName} className="w-6 h-6 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-[9px] uppercase">
+                              {rec.fullName?.substring(0, 1)}
+                            </div>
+                          )}
                           <div>
-                            <p className="font-bold text-foreground text-[10px] leading-tight">{rec.name}</p>
-                            <p className="text-[8px] text-muted">{rec.roleInOrg || "Recruiter"}</p>
+                            <p className="font-bold text-foreground text-[10px] leading-tight">{rec.fullName}</p>
+                            <p className="text-[8px] text-muted">{rec.designation || "Recruiter"}</p>
                           </div>
                         </div>
                       ))}
@@ -627,30 +641,36 @@ export default async function EmployerDashboardPage(props: PageProps) {
                             <ArrowUpRight className="w-3 h-3 shrink-0" />
                           </a>
 
-                          <form action={async () => {
-                            "use server";
-                            await updateOpportunityStatusAction(opp.id, opp.type, opp.isActive ? "pause" : "publish");
-                          }}>
+                          <ClientActionForm 
+                            actionFunc={async () => {
+                              "use server";
+                              await updateOpportunityStatusAction(opp.id, opp.type, opp.isActive ? "pause" : "publish");
+                            }}
+                            successMessage={opp.isActive ? "Opportunity paused successfully." : "Opportunity published successfully."}
+                          >
                             <button 
                               type="submit" 
-                              className="px-2.5 py-1 rounded border border-card-border hover:bg-white/10 text-[10px] font-semibold text-foreground cursor-pointer"
+                              className="px-2.5 py-1 rounded border border-card-border hover:bg-white/10 text-[10px] font-semibold text-foreground cursor-pointer group-disabled:opacity-50 group-disabled:cursor-not-allowed"
                             >
                               {opp.isActive ? "Pause" : "Publish"}
                             </button>
-                          </form>
+                          </ClientActionForm>
 
-                          <form action={async () => {
-                            "use server";
-                            await updateOpportunityStatusAction(opp.id, opp.type, "delete");
-                          }}>
+                          <ClientActionForm 
+                            actionFunc={async () => {
+                              "use server";
+                              await updateOpportunityStatusAction(opp.id, opp.type, "delete");
+                            }}
+                            successMessage="Opportunity deleted successfully."
+                          >
                             <button 
                               type="submit" 
-                              className="p-1 px-1.5 rounded border border-red-500/20 text-red-500 hover:bg-red-500/10 cursor-pointer"
+                              className="p-1 px-1.5 rounded border border-red-500/20 text-red-500 hover:bg-red-500/10 cursor-pointer group-disabled:opacity-50 group-disabled:cursor-not-allowed"
                               title="Delete permanently"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
-                          </form>
+                          </ClientActionForm>
                         </div>
                       </div>
                     );
@@ -662,172 +682,122 @@ export default async function EmployerDashboardPage(props: PageProps) {
 
           {/* TAB 4: ANALYTICS WORKSPACE */}
           {tab === "analytics" && (
-            <div className="space-y-6 text-xs text-left">
-              <div>
-                <h2 className="text-lg font-bold text-foreground">Employer Analytics Workspace</h2>
-                <p className="text-[11px] text-muted">Review hiring conversions, source metrics, and pipeline funnel statistics.</p>
-              </div>
+            (() => {
+              // Calculate Real Analytics
+              const activeListings = opportunities.filter((o: any) => o.status === "PUBLISHED" || o.isActive === true);
+              const uniqueCategories = new Set(activeListings.map((o: any) => o.type)).size;
+              
+              const totalApps = applications.length;
+              const hiredApps = applications.filter((a: any) => a.stage === "HIRED" || a.stage === "OFFER" || a.stage === "OFFER_SENT").length;
+              const conversionRate = totalApps > 0 ? ((hiredApps / totalApps) * 100).toFixed(1) : "0.0";
 
-              {/* Grid cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <div className="glass-panel p-4 rounded-xl border border-card-border">
-                  <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Profile Views</p>
-                  <p className="text-2xl font-black text-foreground mt-1">456</p>
-                  <p className="text-[9px] text-emerald-600 font-bold mt-1">&uarr; 12% views vs last month</p>
-                </div>
-                <div className="glass-panel p-4 rounded-xl border border-card-border">
-                  <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Active Listings</p>
-                  <p className="text-2xl font-black text-foreground mt-1">{opportunities.filter(o => o.isActive).length}</p>
-                  <p className="text-[9px] text-muted mt-1">Across {new Set(opportunities.map(o => o.type)).size} categories</p>
-                </div>
-                <div className="glass-panel p-4 rounded-xl border border-card-border">
-                  <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Application conversion</p>
-                  <p className="text-2xl font-black text-foreground mt-1">
-                    {applications.length > 0 ? ((applications.length / 500) * 100).toFixed(1) : "0.0"}%
-                  </p>
-                  <p className="text-[9px] text-emerald-600 font-bold mt-1">&uarr; 2.1% conversion efficiency</p>
-                </div>
-              </div>
+              const newAppsCount = applications.filter((a: any) => a.stage === "NEW" || a.stage === "APPLIED").length;
+              const reviewAppsCount = applications.filter((a: any) => a.stage === "UNDER_REVIEW" || a.stage === "SCREENING" || a.stage === "ASSESSMENT").length;
+              const shortAppsCount = applications.filter((a: any) => a.stage === "SHORTLISTED").length;
+              const intAppsCount = applications.filter((a: any) => a.stage === "INTERVIEW" || a.stage === "INTERVIEW_SCHEDULED" || a.stage === "INTERVIEW_COMPLETED").length;
+              const hireAppsCount = hiredApps;
 
-              {/* Custom styled HTML Charts */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Funnel diagram */}
-                <div className="glass-panel p-5 rounded-xl border border-card-border space-y-4">
-                  <h3 className="font-bold text-foreground text-xs">ATS Recruitment Funnel</h3>
-                  <div className="space-y-2">
-                    {[
-                      { label: "New Apps", count: applications.length, width: "w-full", bg: "bg-blue-500" },
-                      { label: "Under Review", count: applications.filter((a: any) => a.stage === "UNDER_REVIEW" || a.stage === "SCREENING").length, width: "w-3/4", bg: "bg-amber-500" },
-                      { label: "Shortlisted", count: applications.filter((a: any) => a.stage === "SHORTLISTED").length, width: "w-1/2", bg: "bg-purple-500" },
-                      { label: "Interviews", count: applications.filter((a: any) => a.stage === "INTERVIEW_SCHEDULED" || a.stage === "INTERVIEW").length, width: "w-1/3", bg: "bg-indigo-500" },
-                      { label: "Hired", count: applications.filter((a: any) => a.stage === "HIRED").length, width: "w-1/12", bg: "bg-emerald-500" }
-                    ].map((step: any, idx: number) => (
-                      <div key={idx} className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-bold">
-                          <span>{step.label}</span>
-                          <span>{step.count} candidates</span>
-                        </div>
-                        <div className="w-full bg-neutral-200 dark:bg-neutral-800 h-2 rounded-full overflow-hidden">
-                          <div className={`${step.bg} h-full rounded-full ${step.width}`}></div>
-                        </div>
-                      </div>
-                    ))}
+              const maxFunnel = Math.max(newAppsCount, reviewAppsCount, shortAppsCount, intAppsCount, hireAppsCount, 1);
+
+              const funnelSteps = [
+                { label: "New Apps", count: newAppsCount, bg: "bg-blue-500" },
+                { label: "Under Review", count: reviewAppsCount, bg: "bg-amber-500" },
+                { label: "Shortlisted", count: shortAppsCount, bg: "bg-purple-500" },
+                { label: "Interviews", count: intAppsCount, bg: "bg-indigo-500" },
+                { label: "Hired / Offers", count: hireAppsCount, bg: "bg-emerald-500" }
+              ];
+
+              const categoryShares = [
+                { label: "Jobs", count: applications.filter((a: any) => a.jobId).length, bg: "bg-emerald-500" },
+                { label: "Internships", count: applications.filter((a: any) => a.internshipId).length, bg: "bg-blue-500" },
+                { label: "Fellowships", count: applications.filter((a: any) => a.fellowshipId).length, bg: "bg-purple-500" },
+                { label: "Volunteers", count: applications.filter((a: any) => a.volunteerId).length, bg: "bg-amber-500" },
+                { label: "Grants", count: applications.filter((a: any) => a.grantId).length, bg: "bg-pink-500" },
+                { label: "Consultancies", count: applications.filter((a: any) => a.consultancyId).length, bg: "bg-orange-500" },
+              ].filter(c => c.count > 0);
+
+              return (
+                <div className="space-y-6 text-xs text-left animate-fadeIn">
+                  <div>
+                    <h2 className="text-lg font-bold text-foreground">Employer Analytics Workspace</h2>
+                    <p className="text-[11px] text-muted">Review hiring conversions, source metrics, and pipeline funnel statistics.</p>
                   </div>
-                </div>
 
-                {/* Categories share */}
-                <div className="glass-panel p-5 rounded-xl border border-card-border space-y-4">
-                  <h3 className="font-bold text-foreground text-xs">Applications by Category</h3>
-                  <div className="space-y-3">
-                    {[
-                      { label: "Jobs", count: applications.filter((a: any) => a.jobId).length, percent: 65, color: "text-emerald-500" },
-                      { label: "Internships", count: applications.filter((a: any) => a.internshipId).length, percent: 20, color: "text-blue-500" },
-                      { label: "Fellowships", count: applications.filter((a: any) => a.fellowshipId).length, percent: 10, color: "text-purple-500" },
-                      { label: "Volunteers", count: applications.filter((a: any) => a.volunteerId).length, percent: 5, color: "text-amber-500" }
-                    ].map((c: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between gap-4">
-                        <span className="font-semibold text-muted">{c.label}</span>
-                        <div className="flex-1 bg-neutral-200 dark:bg-neutral-800 h-2 rounded-full overflow-hidden">
-                          <div className={`bg-primary h-full`} style={{ width: `${c.percent}%` }}></div>
-                        </div>
-                        <span className="font-extrabold text-foreground shrink-0">{c.count} ({c.percent}%)</span>
-                      </div>
-                    ))}
+                  {/* Grid cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="glass-panel p-4 rounded-xl border border-card-border">
+                      <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Total Applications</p>
+                      <p className="text-2xl font-black text-foreground mt-1">{totalApps}</p>
+                      <p className="text-[9px] text-muted mt-1">Across all your listings</p>
+                    </div>
+                    <div className="glass-panel p-4 rounded-xl border border-card-border">
+                      <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Active Listings</p>
+                      <p className="text-2xl font-black text-foreground mt-1">{activeListings.length}</p>
+                      <p className="text-[9px] text-muted mt-1">Across {uniqueCategories} categories</p>
+                    </div>
+                    <div className="glass-panel p-4 rounded-xl border border-card-border">
+                      <p className="text-muted text-[10px] font-semibold uppercase tracking-wider">Application conversion</p>
+                      <p className="text-2xl font-black text-foreground mt-1">{conversionRate}%</p>
+                      <p className="text-[9px] text-muted mt-1">Total apps to Hired/Offered</p>
+                    </div>
                   </div>
-                </div>
 
-              </div>
-            </div>
-          )}
-
-          {/* TAB 5: TEAM COLLABORATION */}
-          {tab === "team" && (
-            <div className="space-y-6 text-xs text-left">
-              <div>
-                <h2 className="text-lg font-bold text-foreground">Recruitment Team Collaboration</h2>
-                <p className="text-[11px] text-muted">Invite recruiters from your organization to review candidate applications.</p>
-              </div>
-
-              {/* Invite Recruiter form */}
-              <form 
-                action={async (formData: FormData) => {
-                  "use server";
-                  await inviteRecruiterAction(formData);
-                }} 
-                className="glass-panel p-4 rounded-xl border border-card-border space-y-3"
-              >
-                <input type="hidden" name="orgId" value={org.id} />
-                <h3 className="font-bold text-foreground text-xs flex items-center gap-1"><UserPlus className="w-4 h-4 text-primary" /> Invite New Recruiter</h3>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="font-semibold text-muted">Full Name</label>
-                    <input type="text" name="name" required placeholder="Rahul Sharma" className="form-input" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="font-semibold text-muted">Work Email</label>
-                    <input type="email" name="email" required placeholder="rahul@goonj.org" className="form-input" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="font-semibold text-muted">System Role</label>
-                    <select name="roleInOrg" className="form-input py-1">
-                      <option value="Recruiter">Recruiter (Post & Assess)</option>
-                      <option value="Admin">Admin (Full Edit permissions)</option>
-                      <option value="Viewer">Viewer (Read-only list views)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <button type="submit" className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold cursor-pointer">
-                  Send Collaboration Invite
-                </button>
-              </form>
-
-              {/* Members listing */}
-              <div className="space-y-3">
-                <h3 className="font-bold text-foreground text-xs">Active Team Members</h3>
-                <div className="grid gap-2">
-                  {recruiters.map((member: any) => (
-                    <div key={member.id} className="p-3.5 rounded-xl border border-card-border bg-white/20 dark:bg-zinc-950/20 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        {member.profilePhoto || member.image ? (
-                          <img src={member.profilePhoto || member.image || ""} alt="" className="w-8 h-8 rounded-full object-cover border border-card-border" />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-extrabold text-xs">
-                            {member.name?.substring(0,1) || "U"}
+                  {/* Custom styled HTML Charts */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    {/* Funnel diagram */}
+                    <div className="glass-panel p-5 rounded-xl border border-card-border space-y-4">
+                      <h3 className="font-bold text-foreground text-xs">ATS Recruitment Funnel</h3>
+                      <div className="space-y-3">
+                        {funnelSteps.map((step: any, idx: number) => (
+                          <div key={idx} className="space-y-1">
+                            <div className="flex justify-between text-[10px] font-bold">
+                              <span>{step.label}</span>
+                              <span>{step.count} candidates</span>
+                            </div>
+                            <div className="w-full bg-neutral-200 dark:bg-neutral-800 h-2 rounded-full overflow-hidden">
+                              <div 
+                                className={`${step.bg} h-full rounded-full transition-all duration-1000`} 
+                                style={{ width: `${Math.max((step.count / maxFunnel) * 100, 2)}%` }}
+                              ></div>
+                            </div>
                           </div>
-                        )}
-                        <div>
-                          <p className="font-bold text-foreground text-xs leading-none">{member.name}</p>
-                          <p className="text-[10px] text-muted mt-0.5">{member.email} &middot; <strong className="text-primary">{member.jobTitle || "Recruiter"}</strong></p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-bold">
-                          {member.roleInOrg || "Recruiter"}
-                        </span>
-                        
-                        {member.id !== recruiter.id && (
-                          <form 
-                            action={async (formData: FormData) => {
-                              "use server";
-                              await removeRecruiterMemberAction(formData);
-                            }}
-                          >
-                            <input type="hidden" name="memberId" value={member.id} />
-                            <button type="submit" className="p-1 text-red-500 hover:bg-red-500/10 rounded cursor-pointer" title="Revoke access">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </form>
-                        )}
+                        ))}
                       </div>
                     </div>
-                  ))}
+
+                    {/* Categories share */}
+                    <div className="glass-panel p-5 rounded-xl border border-card-border space-y-4">
+                      <h3 className="font-bold text-foreground text-xs">Applications by Category</h3>
+                      {categoryShares.length === 0 ? (
+                        <p className="text-muted text-xs italic py-4">No applications received yet.</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {categoryShares.map((c: any, idx: number) => {
+                            const percent = ((c.count / totalApps) * 100).toFixed(0);
+                            return (
+                              <div key={idx} className="flex items-center justify-between gap-4">
+                                <span className="font-semibold text-muted w-20 truncate">{c.label}</span>
+                                <div className="flex-1 bg-neutral-200 dark:bg-neutral-800 h-2 rounded-full overflow-hidden">
+                                  <div className={`${c.bg} h-full transition-all duration-1000`} style={{ width: `${percent}%` }}></div>
+                                </div>
+                                <span className="font-extrabold text-foreground shrink-0 w-16 text-right">{c.count} ({percent}%)</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })()
+          )}
+
+          {/* TAB 5: TEAM MEMBERS */}
+          {tab === "team" && (
+            <TeamMembersManager organizationId={org.id} teamMembers={teamMembers} />
           )}
 
           {/* TAB 6: ORGANIZATION DETAILS */}
@@ -838,11 +808,9 @@ export default async function EmployerDashboardPage(props: PageProps) {
                 <p className="text-[11px] text-muted">Update your organization banner, mission statements, cause areas, and contact links.</p>
               </div>
 
-              <form 
-                action={async (formData: FormData) => {
-                  "use server";
-                  await updateOrgProfileRichAction(formData);
-                }} 
+              <ClientActionForm 
+                actionFunc={updateOrgProfileRichAction}
+                successMessage="Organization profile updated successfully!"
                 className="space-y-4"
               >
                 <input type="hidden" name="orgId" value={org.id} />
@@ -865,9 +833,16 @@ export default async function EmployerDashboardPage(props: PageProps) {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <label className="font-semibold text-muted">Logo URL</label>
-                    <input type="url" name="logo" defaultValue={org.logo || ""} placeholder="https://..." className="form-input" />
+                  <div className="flex flex-col gap-1 md:col-span-2">
+                    <ImageUploadBase64
+                      name="logo"
+                      defaultValue={org.logo}
+                      maxSizeMB={3}
+                      label="Organization Logo"
+                      subLabel="Upload a square logo for best display."
+                      fallbackText={org.name?.substring(0, 2) || "LOGO"}
+                      className="w-full"
+                    />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="font-semibold text-muted">Cover Banner Image URL</label>
@@ -993,7 +968,7 @@ export default async function EmployerDashboardPage(props: PageProps) {
                 <button type="submit" className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-colors cursor-pointer w-fit">
                   Save Organization Profile
                 </button>
-              </form>
+              </ClientActionForm>
             </div>
           )}
 
@@ -1005,25 +980,21 @@ export default async function EmployerDashboardPage(props: PageProps) {
                 <p className="text-[11px] text-muted">Update your profile photo, bio, job title, and social links. This card is displayed on your postings.</p>
               </div>
 
-              <form 
-                action={async (formData: FormData) => {
-                  "use server";
-                  await updateRecruiterProfileAction(formData);
-                }} 
+              <ClientActionForm 
+                actionFunc={updateRecruiterProfileAction}
+                successMessage="Recruiter profile updated successfully!"
                 className="space-y-4"
               >
-                <div className="flex items-center gap-4 border-b border-card-border pb-4">
-                  {recruiter.profilePhoto || recruiter.image ? (
-                    <img src={recruiter.profilePhoto || recruiter.image || ""} alt="" className="w-16 h-16 rounded-full object-cover border border-card-border" />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-primary/20 text-primary flex items-center justify-center font-black text-xl uppercase">
-                      {recruiter.name?.substring(0,1) || "U"}
-                    </div>
-                  )}
-                  <div className="flex-1 flex flex-col gap-1">
-                    <label className="font-semibold text-muted">Profile Photo Image URL</label>
-                    <input type="url" name="profilePhoto" defaultValue={recruiter.profilePhoto || recruiter.image || ""} placeholder="https://unsplash.com/..." className="form-input" />
-                  </div>
+                <div className="border-b border-card-border pb-4">
+                  <ImageUploadBase64
+                    name="profilePhoto"
+                    defaultValue={recruiter.profilePhoto || recruiter.image || ""}
+                    maxSizeMB={3}
+                    label="Recruiter Profile Photo"
+                    subLabel="Upload a square headshot for best display."
+                    fallbackText={recruiter.name?.substring(0,1) || "U"}
+                    className="w-full"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1090,7 +1061,7 @@ export default async function EmployerDashboardPage(props: PageProps) {
                 <button type="submit" className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold transition-colors cursor-pointer w-fit">
                   Save Recruiter Profile
                 </button>
-              </form>
+              </ClientActionForm>
             </div>
           )}
 
@@ -1198,7 +1169,7 @@ export default async function EmployerDashboardPage(props: PageProps) {
                         "Basic ATS & Pipeline Management",
                         "Candidate Application Review",
                         "Interview Calendar Scheduling",
-                        "Team Collaboration Invites",
+                        "Public Team Directory",
                         "Basic Workspace Analytics"
                       ].map((item, idx) => (
                         <li key={idx} className="flex items-center gap-1.5 font-medium">
@@ -1319,7 +1290,15 @@ export default async function EmployerDashboardPage(props: PageProps) {
             </div>
           )}
 
-          {/* TAB 10: SUPPORT CHAT */}
+          {/* TAB 10: ALERTS */}
+          {tab === "alerts" && (
+            <AlertsView 
+              notifications={supportNotifications} 
+              onMarkRead={handleMarkRead} 
+            />
+          )}
+
+          {/* TAB 11: SUPPORT CHAT */}
           {tab === "support" && (
             <div className="space-y-6 text-xs text-left">
               <div>

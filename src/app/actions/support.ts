@@ -159,3 +159,53 @@ export async function markNotificationsReadAction(userId: string, skipRevalidate
     return { success: false };
   }
 }
+
+/**
+ * Broadcasts an Admin Board Notice to users.
+ */
+export async function broadcastNoticeAction(formData: FormData): Promise<{ success?: boolean; error?: string; count?: number }> {
+  try {
+    const title = formData.get("title") as string;
+    const message = formData.get("message") as string;
+    const audience = formData.get("audience") as string;
+
+    if (!title || !message || !audience) {
+      return { error: "Title, message, and audience are required." };
+    }
+
+    let whereClause = {};
+    if (audience === "EMPLOYERS") {
+      whereClause = { role: "EMPLOYER" };
+    } else if (audience === "CANDIDATES") {
+      whereClause = { role: "SEEKER" };
+    }
+
+    const users = await db.user.findMany({
+      where: whereClause,
+      select: { id: true }
+    });
+
+    if (users.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    const notifications = users.map((u: { id: string }) => ({
+      userId: u.id,
+      title: title.trim(),
+      message: message.trim(),
+      read: false
+    }));
+
+    await db.notification.createMany({
+      data: notifications
+    });
+
+    revalidatePath("/dashboard/employer");
+    revalidatePath("/dashboard/candidate");
+    
+    return { success: true, count: notifications.length };
+  } catch (err: any) {
+    console.error("Error broadcasting notice:", err);
+    return { error: err.message };
+  }
+}

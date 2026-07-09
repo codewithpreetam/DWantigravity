@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { FileText, CheckCircle, AlertCircle } from "lucide-react";
 import { updateCandidateProfileAction } from "@/app/actions/candidate";
+import { toast } from "react-hot-toast";
 
 import { MASTER_SKILLS } from "@/lib/skills";
 
@@ -15,11 +16,18 @@ interface SeekerProfileFormProps {
     skills?: string[];
     experience?: string | null;
     experienceYears?: number | null;
+    workExperiences?: any;
     educationDegree?: string | null;
     languages?: string[];
     location?: string | null;
     resumeUrl?: string | null;
     profilePhoto?: string | null;
+    domain?: string | null;
+    secondaryDomain?: string | null;
+    workModePreference?: string | null;
+    employmentTypePreference?: string | null;
+    currentOrganization?: string | null;
+    jobTitle?: string | null;
   };
 }
 
@@ -27,16 +35,22 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
   const [photoBase64, setPhotoBase64] = useState<string>(initialProfile.profilePhoto || "");
   const [resumeBase64, setResumeBase64] = useState<string>(initialProfile.resumeUrl || "");
   const [resumeName, setResumeName] = useState<string>(
-    initialProfile.resumeUrl?.startsWith("data:") ? "Active_Resume_CV.pdf" : ""
+    initialProfile.resumeUrl?.startsWith("data:") ? "Active_Resume_CV.pdf" : (initialProfile.resumeUrl ? "Active_Resume_CV.pdf" : "")
   );
   
   const [isPending, setIsPending] = useState(false);
-  const [message, setMessage] = useState<{ success?: string; error?: string } | null>(null);
 
   const [selectedSkills, setSelectedSkills] = useState<string[]>(initialProfile.skills || []);
   const [customSkillInput, setCustomSkillInput] = useState<string>("");
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(initialProfile.languages || []);
   const [customLanguageInput, setCustomLanguageInput] = useState<string>("");
+
+  const [workExperiences, setWorkExperiences] = useState<any[]>(() => {
+    if (initialProfile.workExperiences && Array.isArray(initialProfile.workExperiences)) {
+      return initialProfile.workExperiences;
+    }
+    return [];
+  });
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -56,12 +70,11 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
     // Check size limit: 5 MB
     const limit = 5 * 1024 * 1024;
     if (file.size > limit) {
-      setMessage({ error: "The uploaded CV file size must be less than 5 MB." });
+      toast.error("The uploaded CV file size must be less than 5 MB.");
       e.target.value = ""; // Clear file selector
       return;
     }
 
-    setMessage(null);
     setResumeName(file.name);
     
     const reader = new FileReader();
@@ -74,7 +87,6 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsPending(true);
-    setMessage(null);
 
     const form = e.currentTarget;
     const formData = new FormData(form);
@@ -89,16 +101,18 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
     formData.delete("languages");
     selectedLanguages.forEach(lang => formData.append("languages", lang));
 
+    formData.append("workExperiences", JSON.stringify(workExperiences));
+
     try {
       const res = await updateCandidateProfileAction(formData);
       if (res.success) {
-        setMessage({ success: "Your seeker profile has been successfully saved!" });
+        toast.success("Your seeker profile has been successfully saved!");
       } else {
-        setMessage({ error: res.error || "Failed to update profile." });
+        toast.error(res.error || "Failed to update profile.");
       }
     } catch (err: any) {
       console.error(err);
-      setMessage({ error: err.message || "An unexpected error occurred." });
+      toast.error(err.message || "An unexpected error occurred.");
     } finally {
       setIsPending(false);
     }
@@ -106,18 +120,6 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 text-xs text-left animate-fadeIn">
-      {message?.success && (
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-primary font-semibold text-center flex items-center justify-center gap-1.5">
-          <CheckCircle className="w-4 h-4 text-primary" />
-          <span>{message.success}</span>
-        </div>
-      )}
-      {message?.error && (
-        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-500 font-semibold text-center flex items-center justify-center gap-1.5">
-          <AlertCircle className="w-4 h-4 text-red-500" />
-          <span>{message.error}</span>
-        </div>
-      )}
 
       {/* Profile Photo Upload Header Section */}
       <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20">
@@ -163,8 +165,54 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-muted">Current Job Title</label>
+          <input 
+            type="text" 
+            name="jobTitle"
+            defaultValue={initialProfile.jobTitle || ""} 
+            placeholder="E.g. Marketing Manager" 
+            className="form-input" 
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-muted">Current Organization</label>
+          <input 
+            type="text" 
+            name="currentOrganization"
+            defaultValue={initialProfile.currentOrganization || ""} 
+            placeholder="E.g. Save The Children" 
+            className="form-input" 
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-muted">Primary Domain / Sector</label>
+          <input 
+            type="text" 
+            name="domain"
+            defaultValue={initialProfile.domain || ""} 
+            placeholder="E.g. Education, Health, Environment" 
+            className="form-input" 
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-muted">Secondary Domain (Optional)</label>
+          <input 
+            type="text" 
+            name="secondaryDomain"
+            defaultValue={initialProfile.secondaryDomain || ""} 
+            placeholder="E.g. Women Empowerment" 
+            className="form-input" 
+          />
+        </div>
+      </div>
+
       <div className="flex flex-col gap-1">
-        <label className="font-semibold text-muted">Bio Summary</label>
+        <label className="font-semibold text-muted">Professional Summary (Bio)</label>
         <textarea 
           name="bio"
           rows={3} 
@@ -172,6 +220,114 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
           placeholder="Tell NGOs about your values, CSR experience, and career goals..." 
           className="form-input resize-none"
         ></textarea>
+      </div>
+
+      {/* DYNAMIC WORK EXPERIENCES BUILDER */}
+      <div className="flex flex-col gap-4 p-4 rounded-xl border border-card-border bg-white/30 dark:bg-zinc-950/20">
+        <div>
+          <label className="font-bold text-foreground text-xs">Work Experiences</label>
+          <p className="text-[10px] text-muted leading-none mt-1">Add your work history. Total years of experience will be calculated automatically.</p>
+        </div>
+        
+        {workExperiences.map((exp, index) => (
+          <div key={index} className="flex flex-col gap-3 p-3 border border-border rounded-lg bg-background/50 relative">
+            <button
+              type="button"
+              onClick={() => {
+                const newExp = [...workExperiences];
+                newExp.splice(index, 1);
+                setWorkExperiences(newExp);
+              }}
+              className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-[10px] font-bold px-2 py-1 bg-red-500/10 rounded cursor-pointer"
+            >
+              Remove
+            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-16">
+              <input 
+                type="text" 
+                placeholder="Organization" 
+                value={exp.organization || ""}
+                onChange={(e) => {
+                  const newExp = [...workExperiences];
+                  newExp[index].organization = e.target.value;
+                  setWorkExperiences(newExp);
+                }}
+                className="form-input text-[11px]" 
+              />
+              <input 
+                type="text" 
+                placeholder="Designation" 
+                value={exp.designation || ""}
+                onChange={(e) => {
+                  const newExp = [...workExperiences];
+                  newExp[index].designation = e.target.value;
+                  setWorkExperiences(newExp);
+                }}
+                className="form-input text-[11px]" 
+              />
+              <div className="flex items-center gap-2">
+                <input 
+                  type="month" 
+                  value={exp.startDate || ""}
+                  onChange={(e) => {
+                    const newExp = [...workExperiences];
+                    newExp[index].startDate = e.target.value;
+                    setWorkExperiences(newExp);
+                  }}
+                  className="form-input text-[11px] flex-1" 
+                />
+                <span className="text-[10px] font-medium">to</span>
+                <input 
+                  type="month" 
+                  value={exp.endDate || ""}
+                  disabled={exp.current}
+                  onChange={(e) => {
+                    const newExp = [...workExperiences];
+                    newExp[index].endDate = e.target.value;
+                    setWorkExperiences(newExp);
+                  }}
+                  className="form-input text-[11px] flex-1 disabled:opacity-50" 
+                />
+              </div>
+              <div className="flex items-center gap-2 px-1">
+                <input 
+                  type="checkbox" 
+                  checked={exp.current || false}
+                  onChange={(e) => {
+                    const newExp = [...workExperiences];
+                    newExp[index].current = e.target.checked;
+                    if (e.target.checked) newExp[index].endDate = "";
+                    setWorkExperiences(newExp);
+                  }}
+                  className="rounded border-border text-primary cursor-pointer" 
+                  id={`current-${index}`}
+                />
+                <label htmlFor={`current-${index}`} className="text-[11px] cursor-pointer">Currently Working Here</label>
+              </div>
+            </div>
+            <textarea
+              placeholder="Key Responsibilities..."
+              value={exp.responsibilities || ""}
+              onChange={(e) => {
+                const newExp = [...workExperiences];
+                newExp[index].responsibilities = e.target.value;
+                setWorkExperiences(newExp);
+              }}
+              className="form-input text-[11px] resize-none mt-1"
+              rows={2}
+            ></textarea>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={() => {
+            setWorkExperiences([...workExperiences, { organization: "", designation: "", startDate: "", endDate: "", current: false, responsibilities: "" }]);
+          }}
+          className="px-4 py-2 bg-neutral-200 dark:bg-zinc-800 hover:bg-neutral-300 dark:hover:bg-zinc-700 text-foreground font-semibold rounded-lg text-[10px] transition-colors cursor-pointer w-fit"
+        >
+          + Add Work Experience
+        </button>
       </div>
 
       {/* 1. KEY SECTOR SKILLS */}
@@ -274,6 +430,41 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Work Mode Preference */}
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-muted">Work Mode Preference</label>
+          <select
+            name="workModePreference"
+            defaultValue={initialProfile.workModePreference || ""}
+            className="form-input bg-background py-2"
+          >
+            <option value="">Select Work Mode...</option>
+            <option value="Remote">Remote</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="On-site">On-site</option>
+          </select>
+        </div>
+
+        {/* Employment Type Preference */}
+        <div className="flex flex-col gap-1">
+          <label className="font-semibold text-muted">Employment Type Preference</label>
+          <select
+            name="employmentTypePreference"
+            defaultValue={initialProfile.employmentTypePreference || ""}
+            className="form-input bg-background py-2"
+          >
+            <option value="">Select Employment Type...</option>
+            <option value="Full-time">Full-time</option>
+            <option value="Part-time">Part-time</option>
+            <option value="Contract">Contract</option>
+            <option value="Internship">Internship</option>
+            <option value="Freelance">Freelance</option>
+            <option value="Volunteer">Volunteer</option>
+          </select>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-1">
         <label className="font-semibold text-muted">Detailed Experience Summary (Text)</label>
         <input 
@@ -352,7 +543,7 @@ export default function SeekerProfileForm({ userId, initialProfile }: SeekerProf
           <strong className="text-primary block mt-0.5">Maximum file size: 5 MB (PDF format only).</strong>
         </p>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <input 
             type="file" 
             accept=".pdf" 

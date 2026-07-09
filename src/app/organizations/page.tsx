@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { Building, Globe, MapPin, Search, ArrowUpRight, CheckCircle } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
 
 export const revalidate = 0;
 
@@ -55,11 +56,12 @@ export default async function OrganizationsPage(props: PageProps) {
       </div>
 
       {filteredOrgs.length === 0 ? (
-        <div className="glass-panel p-12 text-center rounded-xl flex-1 flex flex-col justify-center items-center">
-          <Building className="w-12 h-12 text-muted mb-4" />
-          <h3 className="text-lg font-bold text-foreground">No NGOs Found</h3>
-          <p className="text-xs text-muted max-w-xs mt-1">Try searching with a different name.</p>
-        </div>
+        <EmptyState 
+          title="No NGOs Found"
+          description="Try searching with a different name."
+          icon={<Building className="w-12 h-12 text-muted mx-auto" />}
+          clearFiltersHref="/organizations"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredOrgs.map((org: any) => {

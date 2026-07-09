@@ -64,7 +64,7 @@ export default async function BlogPage(props: PageProps) {
                   </span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    {new Date(blog.createdAt).toLocaleDateString()}
+                    {new Date(blog.createdAt).toLocaleDateString("en-GB")}
                   </span>
                 </div>
                 <h3 className="font-extrabold text-xl text-foreground line-clamp-2 hover:text-primary transition-colors leading-snug">

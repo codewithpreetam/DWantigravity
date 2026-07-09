@@ -3,17 +3,20 @@ import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { 
   ShieldAlert, Building, Users, Briefcase, 
-  Check, X, RefreshCw, ShieldCheck, Mail
+  Check, X, RefreshCw, ShieldCheck, Mail, Calendar, Bell, Send
 } from "lucide-react";
-import { UserRole, OrgStatus } from "@prisma/client";
+import { UserRole, OrgStatus, ApplicationStage, OppStatus } from "@prisma/client";
 import { approveOrganizationAction } from "@/app/actions/admin";
 import SupportChat from "@/components/SupportChat";
 import { 
   getAdminConversationsAction, 
   getNotificationsAction, 
-  markNotificationsReadAction 
+  markNotificationsReadAction,
+  broadcastNoticeAction
 } from "@/app/actions/support";
 import { DashboardMobileNav } from "@/components/DashboardMobileNav";
+import OpportunityPostForm from "@/components/OpportunityPostForm";
+import EventPostForm from "@/components/EventPostForm";
 import UserManagement from "./components/UserManagement";
 import OpportunityManagement from "./components/OpportunityManagement";
 export const revalidate = 0;
@@ -33,13 +36,21 @@ export default async function AdminDashboard(props: PageProps) {
 
   // Fetch pending orgs
   const pendingOrgs = await db.organization.findMany({
-    where: { status: OrgStatus.PENDING }
+    where: { status: "PENDING" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const adminOrgs = await db.organization.findMany({
+    where: { status: "APPROVED" },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" }
   });
 
   // Fetch approved orgs
   const approvedOrgs = await db.organization.findMany({
     where: { status: OrgStatus.APPROVED }
   });
+
 
   // Fetch counts
   const totalUsers = await db.user.count();
@@ -114,9 +125,12 @@ export default async function AdminDashboard(props: PageProps) {
         tabs={[
           { id: "approvals", label: "NGO Verification", icon: <Building className="w-4 h-4 shrink-0" /> },
           { id: "users", label: "Users", icon: <Users className="w-4 h-4 shrink-0" /> },
+          { id: "new-job", label: "Post Opportunity", icon: <Briefcase className="w-4 h-4 shrink-0" /> },
+          { id: "new-event", label: "Post Event", icon: <Calendar className="w-4 h-4 shrink-0" /> },
           { id: "opportunities", label: "Opportunities", icon: <Briefcase className="w-4 h-4 shrink-0" /> },
           { id: "listings", label: "Partner Directory", icon: <ShieldCheck className="w-4 h-4 shrink-0" /> },
           { id: "support", label: "Support", icon: <Mail className="w-4 h-4 shrink-0" /> },
+          { id: "notices", label: "System Notices", icon: <Bell className="w-4 h-4 shrink-0" /> },
         ]}
         basePath="/dashboard/admin"
         title="Admin CMS"
@@ -129,9 +143,12 @@ export default async function AdminDashboard(props: PageProps) {
           {[
             { id: "approvals", label: "NGO Verification", icon: Building },
             { id: "users", label: "User Management", icon: Users },
-            { id: "opportunities", label: "Opportunities", icon: Briefcase },
+            { id: "new-job", label: "Post Opportunity", icon: Briefcase },
+            { id: "new-event", label: "Post Event", icon: Calendar },
+            { id: "opportunities", label: "Opportunity Manager", icon: Briefcase },
             { id: "listings", label: "Partner Directory", icon: ShieldCheck },
             { id: "support", label: "Support Helpdesk", icon: Mail },
+            { id: "notices", label: "System Notices", icon: Bell },
           ].map((item) => {
             const Icon = item.icon;
             const isSelected = tab === item.id;
@@ -264,6 +281,80 @@ export default async function AdminDashboard(props: PageProps) {
             <div className="space-y-6">
               <h2 className="text-xl font-bold text-foreground">Opportunity Management</h2>
               <OpportunityManagement />
+            </div>
+          )}
+
+          {/* TAB 4.5: Post Opportunity */}
+          {tab === "support" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">Admin Support Desk</h2>
+                <p className="text-xs text-muted">Manage support conversations with NGOs and Candidates.</p>
+              </div>
+              <div className="glass-panel p-1 rounded-2xl border border-border">
+                <SupportChat userId={session.user.id} userRole={session.user.role} initialMessages={[]} adminConversations={adminConversations} />
+              </div>
+            </div>
+          )}
+
+          {tab === "notices" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-xl md:text-2xl font-bold text-foreground tracking-tight">System Notices</h2>
+                <p className="text-xs text-muted">Broadcast global notices or alerts to user dashboards.</p>
+              </div>
+              <form 
+                action={async (formData: FormData) => {
+                  "use server";
+                  await broadcastNoticeAction(formData);
+                }} 
+                className="glass-panel p-6 rounded-2xl border border-card-border space-y-4"
+              >
+                <div className="flex flex-col gap-2">
+                  <label className="font-semibold text-xs text-muted">Notice Title</label>
+                  <input type="text" name="title" required placeholder="e.g. Scheduled Maintenance" className="form-input" />
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <label className="font-semibold text-xs text-muted">Message body</label>
+                  <textarea name="message" required rows={4} placeholder="Type your notice here..." className="form-input"></textarea>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <label className="font-semibold text-xs text-muted">Target Audience</label>
+                  <select name="audience" className="form-input">
+                    <option value="ALL">All Users (Employers & Candidates)</option>
+                    <option value="EMPLOYERS">Employers Only</option>
+                    <option value="CANDIDATES">Candidates Only</option>
+                  </select>
+                </div>
+                
+                <button type="submit" className="px-6 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg font-bold flex items-center gap-2 cursor-pointer transition-colors mt-2">
+                  <Send className="w-4 h-4" /> Broadcast Notice
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* TAB 4.5: Post Opportunity */}
+          {tab === "new-job" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Post Opportunity (Admin Override)</h2>
+                <p className="text-xs text-muted mt-0.5">Post an opportunity directly on behalf of any approved NGO.</p>
+              </div>
+              <OpportunityPostForm adminOrgs={adminOrgs} />
+            </div>
+          )}
+
+          {/* TAB 4.6: Post Event */}
+          {tab === "new-event" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-foreground">Post Event (Admin Override)</h2>
+                <p className="text-xs text-muted mt-0.5">Post an event directly on behalf of any approved NGO.</p>
+              </div>
+              <EventPostForm adminOrgs={adminOrgs} />
             </div>
           )}
 
